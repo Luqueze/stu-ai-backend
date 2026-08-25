@@ -1,0 +1,55 @@
+HELP.md
+
+### Java ###
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
+
+### Gradle ###
+.gradle/
+build/
+out/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### IDEs ###
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+.apt_generated/
+.springBeans
+.sts4-cache/
+nbproject/
+nbbuild/
+nbdist/
+.nb-gradle/
+
+### OS ###
+.DS_Store
+Thumbs.db
+desktop.ini
+
+### Ambiente / Segredos ###
+.env
+.env.*
+!.env.example
+*.local
+
+### Logs ###
+*.log
+logs/
+
+### Testes / Cobertura ###
+*.hprof
+.jacoco/
