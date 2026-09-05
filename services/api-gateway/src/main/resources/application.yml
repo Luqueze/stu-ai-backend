@@ -1,0 +1,26 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: auth-service
+          uri: ${AUTH_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/api/v1/auth/**,/api/v1/users/**
+        - id: exam-service
+          uri: ${EXAM_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/v1/exams/**
+
+management:
+  endpoint:
+    gateway:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: health,gateway
