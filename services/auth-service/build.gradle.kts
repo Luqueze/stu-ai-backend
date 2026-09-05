@@ -29,3 +29,7 @@ dependencies {
     testCompileOnly(libs.lombok)
     testAnnotationProcessor(libs.lombok)
 }
+
+tasks.named("jar") {
+    enabled = false
+}

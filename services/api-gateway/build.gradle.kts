@@ -13,3 +13,7 @@ dependencies {
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
+
+tasks.named("jar") {
+    enabled = false
+}
