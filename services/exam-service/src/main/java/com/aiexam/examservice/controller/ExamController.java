@@ -1,6 +1,7 @@
 package com.aiexam.examservice.controller;
 
 import com.aiexam.examservice.dto.CreateExamRequest;
+import com.aiexam.examservice.dto.ExamQuestionResponse;
 import com.aiexam.examservice.dto.ExamResponse;
 import com.aiexam.examservice.service.ExamService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -11,6 +12,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,12 +36,39 @@ public class ExamController {
     @GetMapping("/api/v1/exams/{id}")
     @Operation(summary = "Retrieves an exam and its generated questions if ready")
     public ResponseEntity<ExamResponse> getExam(@PathVariable UUID id) {
-        return ResponseEntity.ok(examService.getExam(id));
+        return ResponseEntity.ok(redactAnswerKeyUnlessAdmin(examService.getExam(id)));
     }
 
     @GetMapping("/api/v1/exams")
     @Operation(summary = "Lists all exams")
     public ResponseEntity<List<ExamResponse>> listExams() {
-        return ResponseEntity.ok(examService.listExams());
+        return ResponseEntity.ok(
+                examService.listExams().stream().map(this::redactAnswerKeyUnlessAdmin).toList());
+    }
+
+    private ExamResponse redactAnswerKeyUnlessAdmin(ExamResponse response) {
+        boolean isAdmin =
+                SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .anyMatch("ROLE_ADMIN"::equals);
+        if (isAdmin) {
+            return response;
+        }
+
+        List<ExamQuestionResponse> redactedQuestions =
+                response.questions().stream()
+                        .map(q -> new ExamQuestionResponse(q.statement(), q.options(), null))
+                        .toList();
+        return new ExamResponse(
+                response.id(),
+                response.theme(),
+                response.questionCount(),
+                response.difficulty(),
+                response.status(),
+                response.failureReason(),
+                response.failureMessage(),
+                response.durationMinutes(),
+                response.createdAt(),
+                redactedQuestions);
     }
 }

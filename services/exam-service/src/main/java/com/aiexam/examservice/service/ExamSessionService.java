@@ -42,6 +42,10 @@ public class ExamSessionService {
         return currentSession(examId, sessionKey(examId, studentEmail));
     }
 
+    public void endSession(UUID examId, String studentEmail) {
+        redisTemplate.delete(sessionKey(examId, studentEmail));
+    }
+
     private ExamSessionResponse currentSession(UUID examId, String key) {
         String startedAt = redisTemplate.opsForValue().get(key);
         if (startedAt == null) {

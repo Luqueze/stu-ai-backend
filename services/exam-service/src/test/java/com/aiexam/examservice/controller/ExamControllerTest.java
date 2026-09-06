@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.aiexam.commonevents.DifficultyLevel;
+import com.aiexam.examservice.dto.ExamQuestionResponse;
 import com.aiexam.examservice.dto.ExamResponse;
 import com.aiexam.examservice.entity.ExamStatus;
 import com.aiexam.examservice.exception.ExamNotFoundException;
@@ -81,5 +82,41 @@ class ExamControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.message").value("Exam not found: " + examId));
+    }
+
+    private ExamResponse readyExamWithOneQuestion(UUID examId) {
+        return new ExamResponse(
+                examId,
+                "Basic Arithmetic",
+                1,
+                DifficultyLevel.EASY,
+                ExamStatus.READY,
+                null,
+                null,
+                30,
+                Instant.now(),
+                List.of(new ExamQuestionResponse("2 + 2 = ?", List.of("3", "4"), 1)));
+    }
+
+    @Test
+    @WithMockUser(roles = "STUDENT")
+    void getExamHidesAnswerKeyForStudent() throws Exception {
+        UUID examId = UUID.randomUUID();
+        when(examService.getExam(examId)).thenReturn(readyExamWithOneQuestion(examId));
+
+        mockMvc.perform(get("/api/v1/exams/{id}", examId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.questions[0].correctOptionIndex").value(org.hamcrest.Matchers.nullValue()));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void getExamShowsAnswerKeyForAdmin() throws Exception {
+        UUID examId = UUID.randomUUID();
+        when(examService.getExam(examId)).thenReturn(readyExamWithOneQuestion(examId));
+
+        mockMvc.perform(get("/api/v1/exams/{id}", examId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.questions[0].correctOptionIndex").value(1));
     }
 }

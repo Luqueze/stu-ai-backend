@@ -144,4 +144,14 @@ class ExamSessionServiceTest {
         assertThatThrownBy(() -> examSessionService.getSession(examId, "ada@example.com"))
                 .isInstanceOf(ExamSessionNotFoundException.class);
     }
+
+    @Test
+    void endSessionDeletesTheSessionKey() {
+        UUID examId = UUID.randomUUID();
+
+        examSessionService = service();
+        examSessionService.endSession(examId, "ada@example.com");
+
+        org.mockito.Mockito.verify(redisTemplate).delete("exam-session:" + examId + ":ada@example.com");
+    }
 }
