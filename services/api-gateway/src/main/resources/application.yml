@@ -15,11 +15,33 @@ spring:
           uri: ${EXAM_SERVICE_URL:http://localhost:8082}
           predicates:
             - Path=/api/v1/exams/**
+        - id: auth-service-docs
+          uri: ${AUTH_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/auth-service/v3/api-docs
+          filters:
+            - RewritePath=/auth-service/v3/api-docs, /v3/api-docs
+        - id: exam-service-docs
+          uri: ${EXAM_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/exam-service/v3/api-docs
+          filters:
+            - RewritePath=/exam-service/v3/api-docs, /v3/api-docs
 
 app:
   security:
     jwt:
       secret: ${JWT_SECRET:xADi8Nsg/rZT5dkBSpt5OB+m9+frNVnwprnrsb+EYXU=}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+  swagger-ui.urls[0].name: auth-service
+  swagger-ui.urls[0].url: /auth-service/v3/api-docs
+  swagger-ui.urls[1].name: exam-service
+  swagger-ui.urls[1].url: /exam-service/v3/api-docs
 
 management:
   endpoint:

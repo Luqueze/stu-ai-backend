@@ -22,7 +22,15 @@ public class SecurityConfig {
                 .securityContextRepository(NoOpServerSecurityContextRepository.getInstance())
                 .authorizeExchange(
                         auth ->
-                                auth.pathMatchers("/api/v1/auth/**", "/actuator/**")
+                                auth.pathMatchers(
+                                                "/api/v1/auth/**",
+                                                "/actuator/**",
+                                                "/v3/api-docs/**",
+                                                "/swagger-ui/**",
+                                                "/swagger-ui.html",
+                                                "/webjars/**",
+                                                "/auth-service/v3/api-docs",
+                                                "/exam-service/v3/api-docs")
                                         .permitAll()
                                         .anyExchange()
                                         .authenticated())

@@ -11,6 +11,7 @@ dependencies {
     implementation("org.springframework.cloud:spring-cloud-starter-gateway")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation(libs.springdoc.openapi.webflux)
 
     implementation(libs.jjwt.api)
     runtimeOnly(libs.jjwt.impl)

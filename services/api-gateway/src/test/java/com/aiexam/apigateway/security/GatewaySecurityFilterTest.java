@@ -78,4 +78,14 @@ class GatewaySecurityFilterTest {
                 .expectStatus()
                 .value(status -> assertThat(status).isNotEqualTo(HttpStatus.UNAUTHORIZED.value()));
     }
+
+    @Test
+    void permitsSwaggerUiWithoutToken() {
+        webTestClient.get().uri("/swagger-ui.html").exchange().expectStatus().isFound();
+    }
+
+    @Test
+    void permitsApiDocsWithoutToken() {
+        webTestClient.get().uri("/v3/api-docs").exchange().expectStatus().isOk();
+    }
 }
