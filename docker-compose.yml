@@ -64,7 +64,7 @@ services:
     container_name: ai-exam-auth-service
     restart: unless-stopped
     environment:
-      SERVER_PORT: 8081
+      SERVER_PORT: 8087
       DB_HOST: postgres
       DB_PORT: 5432
       DB_USER: ${DB_USER:-postgres}
@@ -73,7 +73,7 @@ services:
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-3600000}
       API_KEY_ENCRYPTION_SECRET: ${API_KEY_ENCRYPTION_SECRET:-mekD0daFxQiVDPteEfgMxQKF5nQ63SdUehRumBS7S2I=}
     ports:
-      - "8081:8081"
+      - "8087:8087"
     depends_on:
       postgres:
         condition: service_healthy
@@ -87,7 +87,7 @@ services:
     container_name: ai-exam-exam-service
     restart: unless-stopped
     environment:
-      SERVER_PORT: 8082
+      SERVER_PORT: 8088
       DB_HOST: postgres
       DB_PORT: 5432
       DB_USER: ${DB_USER:-postgres}
@@ -100,7 +100,7 @@ services:
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
       JWT_SECRET: ${JWT_SECRET:-xADi8Nsg/rZT5dkBSpt5OB+m9+frNVnwprnrsb+EYXU=}
     ports:
-      - "8082:8082"
+      - "8088:8088"
     depends_on:
       postgres:
         condition: service_healthy
@@ -118,7 +118,7 @@ services:
     container_name: ai-exam-ai-generator-service
     restart: unless-stopped
     environment:
-      SERVER_PORT: 8083
+      SERVER_PORT: 8089
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
       RABBITMQ_USER: ${RABBITMQ_USER:-guest}
@@ -129,7 +129,7 @@ services:
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://localhost:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:14b}
     ports:
-      - "8083:8083"
+      - "8089:8089"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -145,12 +145,12 @@ services:
     container_name: ai-exam-api-gateway
     restart: unless-stopped
     environment:
-      SERVER_PORT: 8080
-      AUTH_SERVICE_URL: http://auth-service:8081
-      EXAM_SERVICE_URL: http://exam-service:8082
+      SERVER_PORT: 8086
+      AUTH_SERVICE_URL: http://auth-service:8087
+      EXAM_SERVICE_URL: http://exam-service:8088
       JWT_SECRET: ${JWT_SECRET:-xADi8Nsg/rZT5dkBSpt5OB+m9+frNVnwprnrsb+EYXU=}
     ports:
-      - "8080:8080"
+      - "8086:8086"
     depends_on:
       - auth-service
       - exam-service

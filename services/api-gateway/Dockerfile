@@ -8,5 +8,5 @@ RUN groupadd --system spring && useradd --system --gid spring spring
 WORKDIR /app
 COPY --from=build /workspace/services/api-gateway/build/libs/*.jar app.jar
 USER spring:spring
-EXPOSE 8080
+EXPOSE 8086
 ENTRYPOINT ["java", "-jar", "app.jar"]

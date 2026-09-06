@@ -1,5 +1,5 @@
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${SERVER_PORT:8086}
 
 spring:
   application:
@@ -8,21 +8,21 @@ spring:
     gateway:
       routes:
         - id: auth-service
-          uri: ${AUTH_SERVICE_URL:http://localhost:8081}
+          uri: ${AUTH_SERVICE_URL:http://localhost:8087}
           predicates:
             - Path=/api/v1/auth/**,/api/v1/users/**
         - id: exam-service
-          uri: ${EXAM_SERVICE_URL:http://localhost:8082}
+          uri: ${EXAM_SERVICE_URL:http://localhost:8088}
           predicates:
             - Path=/api/v1/exams/**
         - id: auth-service-docs
-          uri: ${AUTH_SERVICE_URL:http://localhost:8081}
+          uri: ${AUTH_SERVICE_URL:http://localhost:8087}
           predicates:
             - Path=/auth-service/v3/api-docs
           filters:
             - RewritePath=/auth-service/v3/api-docs, /v3/api-docs
         - id: exam-service-docs
-          uri: ${EXAM_SERVICE_URL:http://localhost:8082}
+          uri: ${EXAM_SERVICE_URL:http://localhost:8088}
           predicates:
             - Path=/exam-service/v3/api-docs
           filters:

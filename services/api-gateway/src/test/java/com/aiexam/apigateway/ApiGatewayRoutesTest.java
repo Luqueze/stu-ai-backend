@@ -37,7 +37,7 @@ class ApiGatewayRoutesTest {
                         .filter(route -> "auth-service".equals(route.get("route_id")))
                         .findFirst()
                         .orElseThrow(() -> new AssertionError("auth-service route not found"));
-        assertThat(authRoute.get("uri").toString()).contains("8081");
+        assertThat(authRoute.get("uri").toString()).contains("8087");
         assertThat(authRoute.get("predicate").toString()).contains("/api/v1/auth/**").contains("/api/v1/users/**");
 
         Map<String, Object> examRoute =
@@ -45,7 +45,7 @@ class ApiGatewayRoutesTest {
                         .filter(route -> "exam-service".equals(route.get("route_id")))
                         .findFirst()
                         .orElseThrow(() -> new AssertionError("exam-service route not found"));
-        assertThat(examRoute.get("uri").toString()).contains("8082");
+        assertThat(examRoute.get("uri").toString()).contains("8088");
         assertThat(examRoute.get("predicate").toString()).contains("/api/v1/exams/**");
     }
 }
