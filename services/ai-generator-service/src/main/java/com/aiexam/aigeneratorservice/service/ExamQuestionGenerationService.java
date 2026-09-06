@@ -3,12 +3,14 @@ package com.aiexam.aigeneratorservice.service;
 import com.aiexam.aigeneratorservice.config.RabbitMQConfig;
 import com.aiexam.aigeneratorservice.config.StructuredOutputOptionsFactory;
 import com.aiexam.aigeneratorservice.dto.GeneratedExamPayload;
+import com.aiexam.aigeneratorservice.dto.GeneratedQuestionPayload;
 import com.aiexam.aigeneratorservice.exception.InvalidGeneratedContentException;
 import com.aiexam.commonevents.ExamGenerationCompletedEvent;
 import com.aiexam.commonevents.ExamGenerationFailedEvent;
 import com.aiexam.commonevents.ExamGenerationRequestedEvent;
 import com.aiexam.commonevents.FailureReason;
 import com.aiexam.commonevents.GeneratedQuestion;
+import java.util.List;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -63,10 +65,15 @@ public class ExamQuestionGenerationService {
             return;
         }
 
+        List<GeneratedQuestion> questions =
+                payload.questions().stream()
+                        .map(q -> new GeneratedQuestion(q.statement(), q.options(), q.correctOptionIndex()))
+                        .toList();
+
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.EXCHANGE,
                 RabbitMQConfig.ROUTING_KEY_COMPLETED,
-                new ExamGenerationCompletedEvent(event.examId(), payload.questions()));
+                new ExamGenerationCompletedEvent(event.examId(), questions));
     }
 
     private GeneratedExamPayload callModel(ExamGenerationRequestedEvent event) {
@@ -113,7 +120,7 @@ public class ExamQuestionGenerationService {
                                     expectedQuestionCount,
                                     payload == null || payload.questions() == null ? 0 : payload.questions().size()));
         }
-        for (GeneratedQuestion question : payload.questions()) {
+        for (GeneratedQuestionPayload question : payload.questions()) {
             if (question.options() == null
                     || question.options().isEmpty()
                     || question.correctOptionIndex() < 0
