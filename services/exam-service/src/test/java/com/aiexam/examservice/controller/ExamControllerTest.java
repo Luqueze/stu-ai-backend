@@ -41,7 +41,7 @@ class ExamControllerTest {
         UUID examId = UUID.randomUUID();
         ExamResponse response =
                 new ExamResponse(
-                        examId, "Basic Arithmetic", 2, DifficultyLevel.EASY, ExamStatus.PENDING, null, null,
+                        examId, "Basic Arithmetic", 2, DifficultyLevel.EASY, ExamStatus.PENDING, null, null, 30,
                         Instant.now(), List.of());
         when(examService.createExam(any())).thenReturn(response);
 
@@ -50,7 +50,7 @@ class ExamControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                         """
-                                        {"theme":"Basic Arithmetic","questionCount":2,"difficulty":"EASY"}
+                                        {"theme":"Basic Arithmetic","questionCount":2,"difficulty":"EASY","durationMinutes":30}
                                         """))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.id").value(examId.toString()))

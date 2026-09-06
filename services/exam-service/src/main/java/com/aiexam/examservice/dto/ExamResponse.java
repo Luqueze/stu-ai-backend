@@ -15,5 +15,6 @@ public record ExamResponse(
         ExamStatus status,
         FailureReason failureReason,
         String failureMessage,
+        int durationMinutes,
         Instant createdAt,
         List<ExamQuestionResponse> questions) {}

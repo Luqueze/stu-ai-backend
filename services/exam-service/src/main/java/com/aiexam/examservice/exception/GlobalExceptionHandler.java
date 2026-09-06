@@ -28,6 +28,18 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }
 
+    @ExceptionHandler(ExamSessionNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleExamSessionNotFound(
+            ExamSessionNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(InvalidExamStateException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidExamState(
+            InvalidExamStateException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
     private ResponseEntity<ErrorResponse> build(
             HttpStatus status, String message, HttpServletRequest request) {
         ErrorResponse body = new ErrorResponse(status.value(), message, Instant.now(), request.getRequestURI());

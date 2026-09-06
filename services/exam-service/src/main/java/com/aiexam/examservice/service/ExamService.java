@@ -32,6 +32,7 @@ public class ExamService {
                         .theme(request.theme())
                         .questionCount(request.questionCount())
                         .difficulty(request.difficulty())
+                        .durationMinutes(request.durationMinutes())
                         .status(ExamStatus.PENDING)
                         .build();
         Exam saved = examRepository.save(exam);
@@ -94,6 +95,7 @@ public class ExamService {
                 exam.getStatus(),
                 exam.getFailureReason(),
                 exam.getFailureMessage(),
+                exam.getDurationMinutes(),
                 exam.getCreatedAt(),
                 questions);
     }

@@ -39,7 +39,7 @@ class ExamServiceTest {
 
     @Test
     void createExamSavesPendingExamAndPublishesRequestedEvent() {
-        CreateExamRequest request = new CreateExamRequest("Basic Arithmetic", 2, DifficultyLevel.EASY);
+        CreateExamRequest request = new CreateExamRequest("Basic Arithmetic", 2, DifficultyLevel.EASY, 30);
         when(examRepository.save(any(Exam.class)))
                 .thenAnswer(
                         invocation -> {
@@ -49,6 +49,7 @@ class ExamServiceTest {
                                     .theme(toSave.getTheme())
                                     .questionCount(toSave.getQuestionCount())
                                     .difficulty(toSave.getDifficulty())
+                                    .durationMinutes(toSave.getDurationMinutes())
                                     .status(toSave.getStatus())
                                     .build();
                         });
@@ -57,6 +58,7 @@ class ExamServiceTest {
 
         assertThat(response.status()).isEqualTo(ExamStatus.PENDING);
         assertThat(response.theme()).isEqualTo("Basic Arithmetic");
+        assertThat(response.durationMinutes()).isEqualTo(30);
         assertThat(response.questions()).isEmpty();
 
         ArgumentCaptor<ExamGenerationRequestedEvent> eventCaptor =

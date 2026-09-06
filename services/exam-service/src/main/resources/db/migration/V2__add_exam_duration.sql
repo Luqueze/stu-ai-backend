@@ -1,0 +1,1 @@
+ALTER TABLE tb_exams ADD COLUMN duration_minutes INT NOT NULL DEFAULT 30;

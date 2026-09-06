@@ -11,4 +11,7 @@ public record CreateExamRequest(
         @Min(value = 1, message = "At least 1 question required")
                 @Max(value = 50, message = "At most 50 questions allowed")
                 int questionCount,
-        @NotNull(message = "Difficulty is required") DifficultyLevel difficulty) {}
+        @NotNull(message = "Difficulty is required") DifficultyLevel difficulty,
+        @Min(value = 1, message = "Duration must be at least 1 minute")
+                @Max(value = 480, message = "Duration cannot exceed 480 minutes")
+                int durationMinutes) {}

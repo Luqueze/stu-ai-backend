@@ -57,6 +57,9 @@ public class Exam {
     @Column(name = "failure_message", columnDefinition = "TEXT")
     private String failureMessage;
 
+    @Column(name = "duration_minutes", nullable = false)
+    private int durationMinutes;
+
     @Builder.Default
     @OneToMany(mappedBy = "exam", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ExamQuestion> questions = new ArrayList<>();
