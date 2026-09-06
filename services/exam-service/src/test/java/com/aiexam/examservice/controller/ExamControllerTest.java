@@ -23,6 +23,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(ExamController.class)
@@ -35,6 +36,7 @@ class ExamControllerTest {
     @MockBean private ExamService examService;
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void createExamReturnsAcceptedWithBody() throws Exception {
         UUID examId = UUID.randomUUID();
         ExamResponse response =
@@ -56,6 +58,7 @@ class ExamControllerTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void createExamWithBlankThemeReturnsBadRequest() throws Exception {
         mockMvc.perform(
                         post("/api/v1/exams")

@@ -37,12 +37,12 @@ class ExamSecurityFilterTest {
 
     @MockBean private ExamService examService;
 
-    private String validToken() {
+    private String tokenWithRole(String role) {
         SecretKey key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(SECRET));
         Instant now = Instant.now();
         return Jwts.builder()
                 .subject("ada@example.com")
-                .claim("role", "STUDENT")
+                .claim("role", role)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plusMillis(3_600_000L)))
                 .signWith(key)
@@ -62,7 +62,20 @@ class ExamSecurityFilterTest {
     }
 
     @Test
-    void allowsRequestWithValidToken() throws Exception {
+    void rejectsStudentFromCreatingExam() throws Exception {
+        mockMvc.perform(
+                        post("/api/v1/exams")
+                                .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithRole("STUDENT"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {"theme":"Basic Arithmetic","questionCount":2,"difficulty":"EASY"}
+                                        """))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void allowsAdminToCreateExam() throws Exception {
         UUID examId = UUID.randomUUID();
         ExamResponse response =
                 new ExamResponse(
@@ -72,7 +85,7 @@ class ExamSecurityFilterTest {
 
         mockMvc.perform(
                         post("/api/v1/exams")
-                                .header(HttpHeaders.AUTHORIZATION, "Bearer " + validToken())
+                                .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithRole("ADMIN"))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                         """
