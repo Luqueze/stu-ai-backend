@@ -9,12 +9,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.aiexam.examservice.dto.ExamSubmissionResponse;
+import com.aiexam.examservice.dto.ExamSubmissionSummaryResponse;
 import com.aiexam.examservice.exception.ExamAlreadySubmittedException;
 import com.aiexam.examservice.exception.ExamSubmissionNotFoundException;
 import com.aiexam.examservice.exception.InvalidSubmissionException;
+import com.aiexam.examservice.security.JwtAuthenticationFilter;
 import com.aiexam.examservice.security.JwtService;
+import com.aiexam.examservice.security.SecurityConfig;
 import com.aiexam.examservice.service.ExamSubmissionService;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +32,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(ExamSubmissionController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(JwtService.class)
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtService.class})
 class ExamSubmissionControllerTest {
 
     @Autowired private MockMvc mockMvc;
@@ -119,5 +123,29 @@ class ExamSubmissionControllerTest {
                 .thenThrow(new ExamSubmissionNotFoundException(examId));
 
         mockMvc.perform(get("/api/v1/exams/{examId}/submission", examId)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void listSubmissionsReturnsAllResultsForAdmin() throws Exception {
+        UUID examId = UUID.randomUUID();
+        when(examSubmissionService.listSubmissions(examId))
+                .thenReturn(
+                        List.of(
+                                new ExamSubmissionSummaryResponse("ada@example.com", 2, 2, 100.0, Instant.now()),
+                                new ExamSubmissionSummaryResponse("bob@example.com", 2, 1, 50.0, Instant.now())));
+
+        mockMvc.perform(get("/api/v1/exams/{examId}/submissions", examId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(2)))
+                .andExpect(jsonPath("$[0].studentEmail").value("ada@example.com"));
+    }
+
+    @Test
+    @WithMockUser(roles = "STUDENT")
+    void listSubmissionsIsForbiddenForStudent() throws Exception {
+        UUID examId = UUID.randomUUID();
+
+        mockMvc.perform(get("/api/v1/exams/{examId}/submissions", examId)).andExpect(status().isForbidden());
     }
 }

@@ -187,4 +187,36 @@ class ExamSubmissionServiceTest {
         assertThat(response.correctCount()).isEqualTo(1);
         assertThat(response.scorePercentage()).isEqualTo(50.0);
     }
+
+    @Test
+    void listSubmissionsReturnsMappedSummariesForExam() {
+        UUID examId = UUID.randomUUID();
+        Exam exam = readyExamWithQuestions(examId);
+        when(examRepository.existsById(examId)).thenReturn(true);
+        ExamSubmission submission =
+                ExamSubmission.builder()
+                        .exam(exam)
+                        .studentEmail("ada@example.com")
+                        .selectedOptions(List.of(1, 1))
+                        .correctCount(1)
+                        .totalQuestions(2)
+                        .scorePercentage(50.0)
+                        .submittedAt(Instant.now())
+                        .build();
+        when(examSubmissionRepository.findByExam_Id(examId)).thenReturn(List.of(submission));
+
+        var summaries = service().listSubmissions(examId);
+
+        assertThat(summaries).hasSize(1);
+        assertThat(summaries.get(0).studentEmail()).isEqualTo("ada@example.com");
+        assertThat(summaries.get(0).scorePercentage()).isEqualTo(50.0);
+    }
+
+    @Test
+    void listSubmissionsThrowsWhenExamNotFound() {
+        UUID examId = UUID.randomUUID();
+        when(examRepository.existsById(examId)).thenReturn(false);
+
+        assertThatThrownBy(() -> service().listSubmissions(examId)).isInstanceOf(ExamNotFoundException.class);
+    }
 }

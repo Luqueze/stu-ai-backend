@@ -1,6 +1,7 @@
 package com.aiexam.examservice.service;
 
 import com.aiexam.examservice.dto.ExamSubmissionResponse;
+import com.aiexam.examservice.dto.ExamSubmissionSummaryResponse;
 import com.aiexam.examservice.dto.SubmitExamRequest;
 import com.aiexam.examservice.entity.Exam;
 import com.aiexam.examservice.entity.ExamQuestion;
@@ -79,6 +80,23 @@ public class ExamSubmissionService {
                         .findByExam_IdAndStudentEmail(examId, studentEmail)
                         .orElseThrow(() -> new ExamSubmissionNotFoundException(examId));
         return toResponse(submission);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ExamSubmissionSummaryResponse> listSubmissions(UUID examId) {
+        if (!examRepository.existsById(examId)) {
+            throw new ExamNotFoundException(examId);
+        }
+        return examSubmissionRepository.findByExam_Id(examId).stream()
+                .map(
+                        s ->
+                                new ExamSubmissionSummaryResponse(
+                                        s.getStudentEmail(),
+                                        s.getTotalQuestions(),
+                                        s.getCorrectCount(),
+                                        s.getScorePercentage(),
+                                        s.getSubmittedAt()))
+                .toList();
     }
 
     private ExamSubmissionResponse toResponse(ExamSubmission submission) {

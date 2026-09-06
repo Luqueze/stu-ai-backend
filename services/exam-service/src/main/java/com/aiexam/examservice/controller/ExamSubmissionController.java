@@ -1,10 +1,12 @@
 package com.aiexam.examservice.controller;
 
 import com.aiexam.examservice.dto.ExamSubmissionResponse;
+import com.aiexam.examservice.dto.ExamSubmissionSummaryResponse;
 import com.aiexam.examservice.dto.SubmitExamRequest;
 import com.aiexam.examservice.service.ExamSubmissionService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -37,6 +39,13 @@ public class ExamSubmissionController {
     @Operation(summary = "Retrieves the caller's exam result")
     public ResponseEntity<ExamSubmissionResponse> getSubmission(@PathVariable UUID examId) {
         return ResponseEntity.ok(examSubmissionService.getSubmission(examId, currentEmail()));
+    }
+
+    @GetMapping("/api/v1/exams/{examId}/submissions")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Lists every student's result for an exam")
+    public ResponseEntity<List<ExamSubmissionSummaryResponse>> listSubmissions(@PathVariable UUID examId) {
+        return ResponseEntity.ok(examSubmissionService.listSubmissions(examId));
     }
 
     private String currentEmail() {
