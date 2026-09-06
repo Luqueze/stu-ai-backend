@@ -11,18 +11,23 @@ import com.aiexam.commonevents.DifficultyLevel;
 import com.aiexam.examservice.dto.ExamResponse;
 import com.aiexam.examservice.entity.ExamStatus;
 import com.aiexam.examservice.exception.ExamNotFoundException;
+import com.aiexam.examservice.security.JwtService;
 import com.aiexam.examservice.service.ExamService;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(ExamController.class)
+@AutoConfigureMockMvc(addFilters = false)
+@Import(JwtService.class)
 class ExamControllerTest {
 
     @Autowired private MockMvc mockMvc;

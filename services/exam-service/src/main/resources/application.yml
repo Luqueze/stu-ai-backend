@@ -34,6 +34,11 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
 
+app:
+  security:
+    jwt:
+      secret: ${JWT_SECRET:xADi8Nsg/rZT5dkBSpt5OB+m9+frNVnwprnrsb+EYXU=}
+
 springdoc:
   api-docs:
     path: /v3/api-docs

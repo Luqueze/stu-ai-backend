@@ -10,6 +10,7 @@ dependencies {
     implementation(project(":common-events"))
 
     implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-amqp")
@@ -18,12 +19,17 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation(libs.springdoc.openapi)
 
+    implementation(libs.jjwt.api)
+    runtimeOnly(libs.jjwt.impl)
+    runtimeOnly(libs.jjwt.jackson)
+
     runtimeOnly("org.postgresql:postgresql")
 
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.security:spring-security-test")
     testImplementation("org.springframework.amqp:spring-rabbit-test")
     testCompileOnly(libs.lombok)
     testAnnotationProcessor(libs.lombok)

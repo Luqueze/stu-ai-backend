@@ -98,6 +98,7 @@ services:
       RABBITMQ_PORT: 5672
       RABBITMQ_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      JWT_SECRET: ${JWT_SECRET:-xADi8Nsg/rZT5dkBSpt5OB+m9+frNVnwprnrsb+EYXU=}
     ports:
       - "8082:8082"
     depends_on:
