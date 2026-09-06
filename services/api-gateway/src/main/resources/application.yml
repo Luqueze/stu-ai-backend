@@ -16,6 +16,11 @@ spring:
           predicates:
             - Path=/api/v1/exams/**
 
+app:
+  security:
+    jwt:
+      secret: ${JWT_SECRET:xADi8Nsg/rZT5dkBSpt5OB+m9+frNVnwprnrsb+EYXU=}
+
 management:
   endpoint:
     gateway:
