@@ -26,7 +26,7 @@ public class ExamService {
     private final ExamRepository examRepository;
     private final RabbitTemplate rabbitTemplate;
 
-    public ExamResponse createExam(CreateExamRequest request) {
+    public ExamResponse createExam(CreateExamRequest request, String createdByEmail) {
         Exam exam =
                 Exam.builder()
                         .theme(request.theme())
@@ -34,6 +34,7 @@ public class ExamService {
                         .difficulty(request.difficulty())
                         .durationMinutes(request.durationMinutes())
                         .status(ExamStatus.PENDING)
+                        .createdByEmail(createdByEmail)
                         .build();
         Exam saved = examRepository.save(exam);
 
@@ -52,8 +53,10 @@ public class ExamService {
     }
 
     @Transactional(readOnly = true)
-    public List<ExamResponse> listExams() {
-        return examRepository.findAll().stream().map(this::toResponse).toList();
+    public List<ExamResponse> listExams(String requesterEmail, boolean isAdmin) {
+        List<Exam> exams =
+                isAdmin ? examRepository.findAll() : examRepository.findByCreatedByEmail(requesterEmail);
+        return exams.stream().map(this::toResponse).toList();
     }
 
     @Transactional

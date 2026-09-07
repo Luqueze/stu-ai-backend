@@ -213,6 +213,24 @@ class ExamSubmissionServiceTest {
     }
 
     @Test
+    void hasSubmittedReturnsTrueWhenSubmissionExists() {
+        UUID examId = UUID.randomUUID();
+        when(examSubmissionRepository.findByExam_IdAndStudentEmail(examId, "ada@example.com"))
+                .thenReturn(Optional.of(ExamSubmission.builder().build()));
+
+        assertThat(service().hasSubmitted(examId, "ada@example.com")).isTrue();
+    }
+
+    @Test
+    void hasSubmittedReturnsFalseWhenNoSubmission() {
+        UUID examId = UUID.randomUUID();
+        when(examSubmissionRepository.findByExam_IdAndStudentEmail(examId, "ada@example.com"))
+                .thenReturn(Optional.empty());
+
+        assertThat(service().hasSubmitted(examId, "ada@example.com")).isFalse();
+    }
+
+    @Test
     void listSubmissionsThrowsWhenExamNotFound() {
         UUID examId = UUID.randomUUID();
         when(examRepository.existsById(examId)).thenReturn(false);

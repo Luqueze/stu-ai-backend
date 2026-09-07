@@ -54,7 +54,7 @@ class ExamServiceTest {
                                     .build();
                         });
 
-        ExamResponse response = examService.createExam(request);
+        ExamResponse response = examService.createExam(request, "ada@example.com");
 
         assertThat(response.status()).isEqualTo(ExamStatus.PENDING);
         assertThat(response.theme()).isEqualTo("Basic Arithmetic");
@@ -101,7 +101,7 @@ class ExamServiceTest {
     }
 
     @Test
-    void listExamsMapsAllRepositoryEntries() {
+    void listExamsReturnsAllExamsForAdmin() {
         Exam examA =
                 Exam.builder()
                         .id(UUID.randomUUID())
@@ -109,6 +109,7 @@ class ExamServiceTest {
                         .questionCount(1)
                         .difficulty(DifficultyLevel.EASY)
                         .status(ExamStatus.PENDING)
+                        .createdByEmail("ada@example.com")
                         .build();
         Exam examB =
                 Exam.builder()
@@ -117,12 +118,31 @@ class ExamServiceTest {
                         .questionCount(1)
                         .difficulty(DifficultyLevel.HARD)
                         .status(ExamStatus.READY)
+                        .createdByEmail("grace@example.com")
                         .build();
         when(examRepository.findAll()).thenReturn(List.of(examA, examB));
 
-        List<ExamResponse> responses = examService.listExams();
+        List<ExamResponse> responses = examService.listExams("admin@example.com", true);
 
         assertThat(responses).hasSize(2).extracting(ExamResponse::theme).containsExactly("A", "B");
+    }
+
+    @Test
+    void listExamsReturnsOnlyOwnExamsForNonAdmin() {
+        Exam examA =
+                Exam.builder()
+                        .id(UUID.randomUUID())
+                        .theme("A")
+                        .questionCount(1)
+                        .difficulty(DifficultyLevel.EASY)
+                        .status(ExamStatus.PENDING)
+                        .createdByEmail("ada@example.com")
+                        .build();
+        when(examRepository.findByCreatedByEmail("ada@example.com")).thenReturn(List.of(examA));
+
+        List<ExamResponse> responses = examService.listExams("ada@example.com", false);
+
+        assertThat(responses).hasSize(1).extracting(ExamResponse::theme).containsExactly("A");
     }
 
     @Test

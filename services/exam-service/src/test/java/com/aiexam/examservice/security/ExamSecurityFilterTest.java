@@ -10,6 +10,7 @@ import com.aiexam.examservice.controller.ExamController;
 import com.aiexam.examservice.dto.ExamResponse;
 import com.aiexam.examservice.entity.ExamStatus;
 import com.aiexam.examservice.service.ExamService;
+import com.aiexam.examservice.service.ExamSubmissionService;
 import io.jsonwebtoken.Jwts;
 import java.time.Instant;
 import java.util.Date;
@@ -36,6 +37,7 @@ class ExamSecurityFilterTest {
     @Autowired private MockMvc mockMvc;
 
     @MockBean private ExamService examService;
+    @MockBean private ExamSubmissionService examSubmissionService;
 
     private String tokenWithRole(String role) {
         SecretKey key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(SECRET));
@@ -62,7 +64,14 @@ class ExamSecurityFilterTest {
     }
 
     @Test
-    void rejectsStudentFromCreatingExam() throws Exception {
+    void allowsStudentToCreateExam() throws Exception {
+        UUID examId = UUID.randomUUID();
+        ExamResponse response =
+                new ExamResponse(
+                        examId, "Basic Arithmetic", 2, DifficultyLevel.EASY, ExamStatus.PENDING, null, null, 30,
+                        Instant.now(), List.of());
+        when(examService.createExam(any(), any())).thenReturn(response);
+
         mockMvc.perform(
                         post("/api/v1/exams")
                                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithRole("STUDENT"))
@@ -71,7 +80,7 @@ class ExamSecurityFilterTest {
                                         """
                                         {"theme":"Basic Arithmetic","questionCount":2,"difficulty":"EASY","durationMinutes":30}
                                         """))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isAccepted());
     }
 
     @Test
@@ -81,7 +90,7 @@ class ExamSecurityFilterTest {
                 new ExamResponse(
                         examId, "Basic Arithmetic", 2, DifficultyLevel.EASY, ExamStatus.PENDING, null, null, 30,
                         Instant.now(), List.of());
-        when(examService.createExam(any())).thenReturn(response);
+        when(examService.createExam(any(), any())).thenReturn(response);
 
         mockMvc.perform(
                         post("/api/v1/exams")

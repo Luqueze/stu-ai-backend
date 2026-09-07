@@ -16,6 +16,7 @@ import com.aiexam.examservice.security.JwtAuthenticationFilter;
 import com.aiexam.examservice.security.JwtService;
 import com.aiexam.examservice.security.SecurityConfig;
 import com.aiexam.examservice.service.ExamService;
+import com.aiexam.examservice.service.ExamSubmissionService;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -37,6 +38,7 @@ class ExamControllerTest {
     @Autowired private MockMvc mockMvc;
 
     @MockBean private ExamService examService;
+    @MockBean private ExamSubmissionService examSubmissionService;
 
     @Test
     @WithMockUser(roles = "ADMIN")
@@ -46,7 +48,7 @@ class ExamControllerTest {
                 new ExamResponse(
                         examId, "Basic Arithmetic", 2, DifficultyLevel.EASY, ExamStatus.PENDING, null, null, 30,
                         Instant.now(), List.of());
-        when(examService.createExam(any())).thenReturn(response);
+        when(examService.createExam(any(), any())).thenReturn(response);
 
         mockMvc.perform(
                         post("/api/v1/exams")
@@ -116,6 +118,18 @@ class ExamControllerTest {
     void getExamShowsAnswerKeyForAdmin() throws Exception {
         UUID examId = UUID.randomUUID();
         when(examService.getExam(examId)).thenReturn(readyExamWithOneQuestion(examId));
+
+        mockMvc.perform(get("/api/v1/exams/{id}", examId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.questions[0].correctOptionIndex").value(1));
+    }
+
+    @Test
+    @WithMockUser(roles = "STUDENT")
+    void getExamShowsAnswerKeyForStudentWhoAlreadySubmitted() throws Exception {
+        UUID examId = UUID.randomUUID();
+        when(examService.getExam(examId)).thenReturn(readyExamWithOneQuestion(examId));
+        when(examSubmissionService.hasSubmitted(examId, "user")).thenReturn(true);
 
         mockMvc.perform(get("/api/v1/exams/{id}", examId))
                 .andExpect(status().isOk())

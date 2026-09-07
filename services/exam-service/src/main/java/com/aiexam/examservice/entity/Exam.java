@@ -60,6 +60,9 @@ public class Exam {
     @Column(name = "duration_minutes", nullable = false)
     private int durationMinutes;
 
+    @Column(name = "created_by_email")
+    private String createdByEmail;
+
     @Builder.Default
     @OneToMany(mappedBy = "exam", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ExamQuestion> questions = new ArrayList<>();

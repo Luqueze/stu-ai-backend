@@ -74,6 +74,11 @@ public class ExamSubmissionService {
     }
 
     @Transactional(readOnly = true)
+    public boolean hasSubmitted(UUID examId, String studentEmail) {
+        return examSubmissionRepository.findByExam_IdAndStudentEmail(examId, studentEmail).isPresent();
+    }
+
+    @Transactional(readOnly = true)
     public ExamSubmissionResponse getSubmission(UUID examId, String studentEmail) {
         ExamSubmission submission =
                 examSubmissionRepository

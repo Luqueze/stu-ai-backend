@@ -4,6 +4,7 @@ import com.aiexam.examservice.dto.CreateExamRequest;
 import com.aiexam.examservice.dto.ExamQuestionResponse;
 import com.aiexam.examservice.dto.ExamResponse;
 import com.aiexam.examservice.service.ExamService;
+import com.aiexam.examservice.service.ExamSubmissionService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -25,36 +26,53 @@ import org.springframework.web.bind.annotation.RestController;
 public class ExamController {
 
     private final ExamService examService;
+    private final ExamSubmissionService examSubmissionService;
 
     @PostMapping("/api/v1/exams")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
     @Operation(summary = "Creates a new exam and queues AI question generation")
     public ResponseEntity<ExamResponse> createExam(@Valid @RequestBody CreateExamRequest request) {
-        return ResponseEntity.status(HttpStatus.ACCEPTED).body(examService.createExam(request));
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(examService.createExam(request, currentEmail()));
     }
 
     @GetMapping("/api/v1/exams/{id}")
     @Operation(summary = "Retrieves an exam and its generated questions if ready")
     public ResponseEntity<ExamResponse> getExam(@PathVariable UUID id) {
-        return ResponseEntity.ok(redactAnswerKeyUnlessAdmin(examService.getExam(id)));
+        ExamResponse response = examService.getExam(id);
+        if (isAdmin() || examSubmissionService.hasSubmitted(id, currentEmail())) {
+            return ResponseEntity.ok(response);
+        }
+        return ResponseEntity.ok(redactAnswerKey(response));
     }
 
     @GetMapping("/api/v1/exams")
-    @Operation(summary = "Lists all exams")
+    @Operation(summary = "Lists the caller's exams, or every exam for admins")
     public ResponseEntity<List<ExamResponse>> listExams() {
         return ResponseEntity.ok(
-                examService.listExams().stream().map(this::redactAnswerKeyUnlessAdmin).toList());
+                examService.listExams(currentEmail(), isAdmin()).stream()
+                        .map(this::redactAnswerKeyUnlessAdmin)
+                        .toList());
+    }
+
+    private String currentEmail() {
+        return SecurityContextHolder.getContext().getAuthentication().getName();
+    }
+
+    private boolean isAdmin() {
+        return SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch("ROLE_ADMIN"::equals);
     }
 
     private ExamResponse redactAnswerKeyUnlessAdmin(ExamResponse response) {
-        boolean isAdmin =
-                SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
-                        .map(GrantedAuthority::getAuthority)
-                        .anyMatch("ROLE_ADMIN"::equals);
-        if (isAdmin) {
+        if (isAdmin()) {
             return response;
         }
+        return redactAnswerKey(response);
+    }
 
+    private ExamResponse redactAnswerKey(ExamResponse response) {
         List<ExamQuestionResponse> redactedQuestions =
                 response.questions().stream()
                         .map(q -> new ExamQuestionResponse(q.statement(), q.options(), null))
