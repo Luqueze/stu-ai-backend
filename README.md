@@ -1,4 +1,4 @@
-# AI Exam Platform — Back-end
+# Stu Ai — Back-end
 
 > Criei esse projeto para estudar e praticar
 > microsserviços com Spring Boot, mensageria assíncrona, integração com LLMs e boas práticas de
