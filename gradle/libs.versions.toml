@@ -5,6 +5,7 @@ springAi = "1.0.0-M6"
 springdocOpenapi = "2.6.0"
 jjwt = "0.12.6"
 lombok = "1.18.34"
+sonarqube = "7.5.0.8588"
 
 [libraries]
 spring-boot-dependencies = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "springBoot" }
@@ -19,3 +20,4 @@ lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "springBoot" }
+sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
