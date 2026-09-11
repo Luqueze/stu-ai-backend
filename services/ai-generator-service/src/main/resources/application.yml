@@ -8,6 +8,9 @@ app:
 spring:
   application:
     name: ai-generator-service
+  threads:
+    virtual:
+      enabled: true
   autoconfigure:
     exclude:
       - org.springframework.ai.autoconfigure.openai.OpenAiAutoConfiguration
