@@ -10,7 +10,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.aiexam.examservice.dto.ExamSubmissionResponse;
 import com.aiexam.examservice.dto.ExamSubmissionSummaryResponse;
-import com.aiexam.examservice.exception.ExamAlreadySubmittedException;
 import com.aiexam.examservice.exception.ExamSubmissionNotFoundException;
 import com.aiexam.examservice.exception.InvalidSubmissionException;
 import com.aiexam.examservice.security.JwtAuthenticationFilter;
@@ -55,22 +54,6 @@ class ExamSubmissionControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.correctCount").value(1))
                 .andExpect(jsonPath("$.scorePercentage").value(50.0));
-    }
-
-    @Test
-    @WithMockUser(roles = "STUDENT")
-    void submitReturnsConflictWhenAlreadySubmitted() throws Exception {
-        UUID examId = UUID.randomUUID();
-        when(examSubmissionService.submit(eq(examId), any(), any()))
-                .thenThrow(new ExamAlreadySubmittedException(examId));
-
-        mockMvc.perform(
-                        post("/api/v1/exams/{examId}/submission", examId)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content("""
-                                        {"selectedOptions":[1,1]}
-                                        """))
-                .andExpect(status().isConflict());
     }
 
     @Test
@@ -123,6 +106,22 @@ class ExamSubmissionControllerTest {
                 .thenThrow(new ExamSubmissionNotFoundException(examId));
 
         mockMvc.perform(get("/api/v1/exams/{examId}/submission", examId)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "STUDENT")
+    void getSubmissionHistoryReturnsEveryAttempt() throws Exception {
+        UUID examId = UUID.randomUUID();
+        when(examSubmissionService.getSubmissionHistory(eq(examId), any()))
+                .thenReturn(
+                        List.of(
+                                new ExamSubmissionResponse(examId, 2, 2, 100.0, Instant.now()),
+                                new ExamSubmissionResponse(examId, 2, 0, 0.0, Instant.now())));
+
+        mockMvc.perform(get("/api/v1/exams/{examId}/submission/history", examId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(2)))
+                .andExpect(jsonPath("$[0].scorePercentage").value(100.0));
     }
 
     @Test

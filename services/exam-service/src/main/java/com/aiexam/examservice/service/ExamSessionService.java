@@ -46,6 +46,10 @@ public class ExamSessionService {
         redisTemplate.delete(sessionKey(examId, studentEmail));
     }
 
+    public boolean hasActiveSession(UUID examId, String studentEmail) {
+        return Boolean.TRUE.equals(redisTemplate.hasKey(sessionKey(examId, studentEmail)));
+    }
+
     private ExamSessionResponse currentSession(UUID examId, String key) {
         String startedAt = redisTemplate.opsForValue().get(key);
         if (startedAt == null) {

@@ -4,6 +4,7 @@ import com.aiexam.examservice.dto.CreateExamRequest;
 import com.aiexam.examservice.dto.ExamQuestionResponse;
 import com.aiexam.examservice.dto.ExamResponse;
 import com.aiexam.examservice.service.ExamService;
+import com.aiexam.examservice.service.ExamSessionService;
 import com.aiexam.examservice.service.ExamSubmissionService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -27,6 +28,7 @@ public class ExamController {
 
     private final ExamService examService;
     private final ExamSubmissionService examSubmissionService;
+    private final ExamSessionService examSessionService;
 
     @PostMapping("/api/v1/exams")
     @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
@@ -40,10 +42,17 @@ public class ExamController {
     @Operation(summary = "Retrieves an exam and its generated questions if ready")
     public ResponseEntity<ExamResponse> getExam(@PathVariable UUID id) {
         ExamResponse response = examService.getExam(id);
-        if (isAdmin() || examSubmissionService.hasSubmitted(id, currentEmail())) {
+        if (isAdmin() || canReviewAnswerKey(id)) {
             return ResponseEntity.ok(response);
         }
         return ResponseEntity.ok(redactAnswerKey(response));
+    }
+
+    // A student can only see correct answers once they've submitted at least one attempt and
+    // aren't currently mid-attempt (e.g. retaking the exam), so a retake doesn't leak the key.
+    private boolean canReviewAnswerKey(UUID examId) {
+        String email = currentEmail();
+        return examSubmissionService.hasSubmitted(examId, email) && !examSessionService.hasActiveSession(examId, email);
     }
 
     @GetMapping("/api/v1/exams")

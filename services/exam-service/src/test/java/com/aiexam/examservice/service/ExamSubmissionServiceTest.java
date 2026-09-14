@@ -15,7 +15,6 @@ import com.aiexam.examservice.entity.Exam;
 import com.aiexam.examservice.entity.ExamQuestion;
 import com.aiexam.examservice.entity.ExamStatus;
 import com.aiexam.examservice.entity.ExamSubmission;
-import com.aiexam.examservice.exception.ExamAlreadySubmittedException;
 import com.aiexam.examservice.exception.ExamNotFoundException;
 import com.aiexam.examservice.exception.ExamSessionNotFoundException;
 import com.aiexam.examservice.exception.InvalidExamStateException;
@@ -74,8 +73,6 @@ class ExamSubmissionServiceTest {
         UUID examId = UUID.randomUUID();
         Exam exam = readyExamWithQuestions(examId);
         when(examRepository.findById(examId)).thenReturn(Optional.of(exam));
-        when(examSubmissionRepository.findByExam_IdAndStudentEmail(examId, "ada@example.com"))
-                .thenReturn(Optional.empty());
         when(examSessionService.getSession(examId, "ada@example.com"))
                 .thenReturn(new ExamSessionResponse(examId, Instant.now(), 900L));
         when(examSubmissionRepository.save(any(ExamSubmission.class)))
@@ -121,16 +118,21 @@ class ExamSubmissionServiceTest {
     }
 
     @Test
-    void submitThrowsWhenAlreadySubmitted() {
+    void submitAllowsARetakeAfterAPriorAttempt() {
         UUID examId = UUID.randomUUID();
         Exam exam = readyExamWithQuestions(examId);
         when(examRepository.findById(examId)).thenReturn(Optional.of(exam));
-        when(examSubmissionRepository.findByExam_IdAndStudentEmail(examId, "ada@example.com"))
-                .thenReturn(Optional.of(ExamSubmission.builder().build()));
+        when(examSessionService.getSession(examId, "ada@example.com"))
+                .thenReturn(new ExamSessionResponse(examId, Instant.now(), 900L));
+        when(examSubmissionRepository.save(any(ExamSubmission.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
-        assertThatThrownBy(
-                        () -> service().submit(examId, "ada@example.com", new SubmitExamRequest(List.of(1, 1))))
-                .isInstanceOf(ExamAlreadySubmittedException.class);
+        ExamSubmissionResponse response =
+                service().submit(examId, "ada@example.com", new SubmitExamRequest(List.of(1, 0)));
+
+        assertThat(response.correctCount()).isEqualTo(2);
+        verify(examSubmissionRepository).save(any(ExamSubmission.class));
+        verify(examSessionService).endSession(examId, "ada@example.com");
     }
 
     @Test
@@ -138,8 +140,6 @@ class ExamSubmissionServiceTest {
         UUID examId = UUID.randomUUID();
         Exam exam = readyExamWithQuestions(examId);
         when(examRepository.findById(examId)).thenReturn(Optional.of(exam));
-        when(examSubmissionRepository.findByExam_IdAndStudentEmail(examId, "ada@example.com"))
-                .thenReturn(Optional.empty());
         when(examSessionService.getSession(examId, "ada@example.com"))
                 .thenThrow(new ExamSessionNotFoundException(examId));
 
@@ -154,8 +154,6 @@ class ExamSubmissionServiceTest {
         UUID examId = UUID.randomUUID();
         Exam exam = readyExamWithQuestions(examId);
         when(examRepository.findById(examId)).thenReturn(Optional.of(exam));
-        when(examSubmissionRepository.findByExam_IdAndStudentEmail(examId, "ada@example.com"))
-                .thenReturn(Optional.empty());
         when(examSessionService.getSession(examId, "ada@example.com"))
                 .thenReturn(new ExamSessionResponse(examId, Instant.now(), 900L));
 
@@ -165,7 +163,7 @@ class ExamSubmissionServiceTest {
     }
 
     @Test
-    void getSubmissionReturnsMappedResponse() {
+    void getSubmissionReturnsTheMostRecentAttempt() {
         UUID examId = UUID.randomUUID();
         Exam exam = readyExamWithQuestions(examId);
         ExamSubmission submission =
@@ -178,7 +176,8 @@ class ExamSubmissionServiceTest {
                         .scorePercentage(50.0)
                         .submittedAt(Instant.now())
                         .build();
-        when(examSubmissionRepository.findByExam_IdAndStudentEmail(examId, "ada@example.com"))
+        when(examSubmissionRepository.findFirstByExam_IdAndStudentEmailOrderBySubmittedAtDesc(
+                        examId, "ada@example.com"))
                 .thenReturn(Optional.of(submission));
 
         ExamSubmissionResponse response = service().getSubmission(examId, "ada@example.com");
@@ -186,6 +185,41 @@ class ExamSubmissionServiceTest {
         assertThat(response.examId()).isEqualTo(examId);
         assertThat(response.correctCount()).isEqualTo(1);
         assertThat(response.scorePercentage()).isEqualTo(50.0);
+    }
+
+    @Test
+    void getSubmissionHistoryReturnsEveryAttemptMostRecentFirst() {
+        UUID examId = UUID.randomUUID();
+        Exam exam = readyExamWithQuestions(examId);
+        ExamSubmission first =
+                ExamSubmission.builder()
+                        .exam(exam)
+                        .studentEmail("ada@example.com")
+                        .selectedOptions(List.of(0, 0))
+                        .correctCount(0)
+                        .totalQuestions(2)
+                        .scorePercentage(0.0)
+                        .submittedAt(Instant.now().minusSeconds(60))
+                        .build();
+        ExamSubmission second =
+                ExamSubmission.builder()
+                        .exam(exam)
+                        .studentEmail("ada@example.com")
+                        .selectedOptions(List.of(1, 0))
+                        .correctCount(2)
+                        .totalQuestions(2)
+                        .scorePercentage(100.0)
+                        .submittedAt(Instant.now())
+                        .build();
+        when(examSubmissionRepository.findByExam_IdAndStudentEmailOrderBySubmittedAtDesc(
+                        examId, "ada@example.com"))
+                .thenReturn(List.of(second, first));
+
+        var history = service().getSubmissionHistory(examId, "ada@example.com");
+
+        assertThat(history).hasSize(2);
+        assertThat(history.get(0).scorePercentage()).isEqualTo(100.0);
+        assertThat(history.get(1).scorePercentage()).isEqualTo(0.0);
     }
 
     @Test
@@ -203,7 +237,8 @@ class ExamSubmissionServiceTest {
                         .scorePercentage(50.0)
                         .submittedAt(Instant.now())
                         .build();
-        when(examSubmissionRepository.findByExam_Id(examId)).thenReturn(List.of(submission));
+        when(examSubmissionRepository.findByExam_IdOrderByStudentEmailAscSubmittedAtDesc(examId))
+                .thenReturn(List.of(submission));
 
         var summaries = service().listSubmissions(examId);
 
@@ -215,8 +250,8 @@ class ExamSubmissionServiceTest {
     @Test
     void hasSubmittedReturnsTrueWhenSubmissionExists() {
         UUID examId = UUID.randomUUID();
-        when(examSubmissionRepository.findByExam_IdAndStudentEmail(examId, "ada@example.com"))
-                .thenReturn(Optional.of(ExamSubmission.builder().build()));
+        when(examSubmissionRepository.existsByExam_IdAndStudentEmail(examId, "ada@example.com"))
+                .thenReturn(true);
 
         assertThat(service().hasSubmitted(examId, "ada@example.com")).isTrue();
     }
@@ -224,8 +259,8 @@ class ExamSubmissionServiceTest {
     @Test
     void hasSubmittedReturnsFalseWhenNoSubmission() {
         UUID examId = UUID.randomUUID();
-        when(examSubmissionRepository.findByExam_IdAndStudentEmail(examId, "ada@example.com"))
-                .thenReturn(Optional.empty());
+        when(examSubmissionRepository.existsByExam_IdAndStudentEmail(examId, "ada@example.com"))
+                .thenReturn(false);
 
         assertThat(service().hasSubmitted(examId, "ada@example.com")).isFalse();
     }

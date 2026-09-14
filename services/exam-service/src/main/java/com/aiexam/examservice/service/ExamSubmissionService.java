@@ -7,7 +7,6 @@ import com.aiexam.examservice.entity.Exam;
 import com.aiexam.examservice.entity.ExamQuestion;
 import com.aiexam.examservice.entity.ExamStatus;
 import com.aiexam.examservice.entity.ExamSubmission;
-import com.aiexam.examservice.exception.ExamAlreadySubmittedException;
 import com.aiexam.examservice.exception.ExamNotFoundException;
 import com.aiexam.examservice.exception.InvalidExamStateException;
 import com.aiexam.examservice.exception.ExamSubmissionNotFoundException;
@@ -35,11 +34,9 @@ public class ExamSubmissionService {
         if (exam.getStatus() != ExamStatus.READY) {
             throw new InvalidExamStateException(examId, exam.getStatus());
         }
-        if (examSubmissionRepository.findByExam_IdAndStudentEmail(examId, studentEmail).isPresent()) {
-            throw new ExamAlreadySubmittedException(examId);
-        }
 
         // Requires a still-active timed session: throws if the student never started one, or if it expired.
+        // A new session per attempt is also what stops the same attempt from being submitted twice.
         examSessionService.getSession(examId, studentEmail);
 
         List<ExamQuestion> questions = exam.getQuestions();
@@ -75,16 +72,25 @@ public class ExamSubmissionService {
 
     @Transactional(readOnly = true)
     public boolean hasSubmitted(UUID examId, String studentEmail) {
-        return examSubmissionRepository.findByExam_IdAndStudentEmail(examId, studentEmail).isPresent();
+        return examSubmissionRepository.existsByExam_IdAndStudentEmail(examId, studentEmail);
     }
 
     @Transactional(readOnly = true)
     public ExamSubmissionResponse getSubmission(UUID examId, String studentEmail) {
         ExamSubmission submission =
                 examSubmissionRepository
-                        .findByExam_IdAndStudentEmail(examId, studentEmail)
+                        .findFirstByExam_IdAndStudentEmailOrderBySubmittedAtDesc(examId, studentEmail)
                         .orElseThrow(() -> new ExamSubmissionNotFoundException(examId));
         return toResponse(submission);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ExamSubmissionResponse> getSubmissionHistory(UUID examId, String studentEmail) {
+        return examSubmissionRepository
+                .findByExam_IdAndStudentEmailOrderBySubmittedAtDesc(examId, studentEmail)
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -92,7 +98,7 @@ public class ExamSubmissionService {
         if (!examRepository.existsById(examId)) {
             throw new ExamNotFoundException(examId);
         }
-        return examSubmissionRepository.findByExam_Id(examId).stream()
+        return examSubmissionRepository.findByExam_IdOrderByStudentEmailAscSubmittedAtDesc(examId).stream()
                 .map(
                         s ->
                                 new ExamSubmissionSummaryResponse(

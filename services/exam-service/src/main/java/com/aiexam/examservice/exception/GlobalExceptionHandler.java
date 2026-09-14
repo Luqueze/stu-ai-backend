@@ -46,12 +46,6 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
 
-    @ExceptionHandler(ExamAlreadySubmittedException.class)
-    public ResponseEntity<ErrorResponse> handleExamAlreadySubmitted(
-            ExamAlreadySubmittedException ex, HttpServletRequest request) {
-        return build(HttpStatus.CONFLICT, ex.getMessage(), request);
-    }
-
     @ExceptionHandler(ExamSubmissionNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleExamSubmissionNotFound(
             ExamSubmissionNotFoundException ex, HttpServletRequest request) {

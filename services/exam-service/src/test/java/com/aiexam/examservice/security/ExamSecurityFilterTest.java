@@ -10,6 +10,7 @@ import com.aiexam.examservice.controller.ExamController;
 import com.aiexam.examservice.dto.ExamResponse;
 import com.aiexam.examservice.entity.ExamStatus;
 import com.aiexam.examservice.service.ExamService;
+import com.aiexam.examservice.service.ExamSessionService;
 import com.aiexam.examservice.service.ExamSubmissionService;
 import io.jsonwebtoken.Jwts;
 import java.time.Instant;
@@ -38,6 +39,7 @@ class ExamSecurityFilterTest {
 
     @MockBean private ExamService examService;
     @MockBean private ExamSubmissionService examSubmissionService;
+    @MockBean private ExamSessionService examSessionService;
 
     private String tokenWithRole(String role) {
         SecretKey key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(SECRET));

@@ -36,9 +36,16 @@ public class ExamSubmissionController {
 
     @GetMapping("/api/v1/exams/{examId}/submission")
     @PreAuthorize("hasRole('STUDENT')")
-    @Operation(summary = "Retrieves the caller's exam result")
+    @Operation(summary = "Retrieves the caller's most recent exam attempt")
     public ResponseEntity<ExamSubmissionResponse> getSubmission(@PathVariable UUID examId) {
         return ResponseEntity.ok(examSubmissionService.getSubmission(examId, currentEmail()));
+    }
+
+    @GetMapping("/api/v1/exams/{examId}/submission/history")
+    @PreAuthorize("hasRole('STUDENT')")
+    @Operation(summary = "Lists every one of the caller's attempts for an exam, most recent first")
+    public ResponseEntity<List<ExamSubmissionResponse>> getSubmissionHistory(@PathVariable UUID examId) {
+        return ResponseEntity.ok(examSubmissionService.getSubmissionHistory(examId, currentEmail()));
     }
 
     @GetMapping("/api/v1/exams/{examId}/submissions")

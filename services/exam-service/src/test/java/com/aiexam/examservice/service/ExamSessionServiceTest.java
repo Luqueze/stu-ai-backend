@@ -154,4 +154,24 @@ class ExamSessionServiceTest {
 
         org.mockito.Mockito.verify(redisTemplate).delete("exam-session:" + examId + ":ada@example.com");
     }
+
+    @Test
+    void hasActiveSessionReturnsTrueWhenKeyExists() {
+        UUID examId = UUID.randomUUID();
+        String expectedKey = "exam-session:" + examId + ":ada@example.com";
+        when(redisTemplate.hasKey(expectedKey)).thenReturn(true);
+
+        examSessionService = service();
+        assertThat(examSessionService.hasActiveSession(examId, "ada@example.com")).isTrue();
+    }
+
+    @Test
+    void hasActiveSessionReturnsFalseWhenKeyMissing() {
+        UUID examId = UUID.randomUUID();
+        String expectedKey = "exam-session:" + examId + ":ada@example.com";
+        when(redisTemplate.hasKey(expectedKey)).thenReturn(false);
+
+        examSessionService = service();
+        assertThat(examSessionService.hasActiveSession(examId, "ada@example.com")).isFalse();
+    }
 }

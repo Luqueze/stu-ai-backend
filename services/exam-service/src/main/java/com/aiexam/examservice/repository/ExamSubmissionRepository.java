@@ -7,7 +7,12 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ExamSubmissionRepository extends JpaRepository<ExamSubmission, UUID> {
-    Optional<ExamSubmission> findByExam_IdAndStudentEmail(UUID examId, String studentEmail);
+    boolean existsByExam_IdAndStudentEmail(UUID examId, String studentEmail);
 
-    List<ExamSubmission> findByExam_Id(UUID examId);
+    Optional<ExamSubmission> findFirstByExam_IdAndStudentEmailOrderBySubmittedAtDesc(
+            UUID examId, String studentEmail);
+
+    List<ExamSubmission> findByExam_IdAndStudentEmailOrderBySubmittedAtDesc(UUID examId, String studentEmail);
+
+    List<ExamSubmission> findByExam_IdOrderByStudentEmailAscSubmittedAtDesc(UUID examId);
 }

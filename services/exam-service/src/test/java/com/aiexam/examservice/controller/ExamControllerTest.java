@@ -16,6 +16,7 @@ import com.aiexam.examservice.security.JwtAuthenticationFilter;
 import com.aiexam.examservice.security.JwtService;
 import com.aiexam.examservice.security.SecurityConfig;
 import com.aiexam.examservice.service.ExamService;
+import com.aiexam.examservice.service.ExamSessionService;
 import com.aiexam.examservice.service.ExamSubmissionService;
 import java.time.Instant;
 import java.util.List;
@@ -39,6 +40,7 @@ class ExamControllerTest {
 
     @MockBean private ExamService examService;
     @MockBean private ExamSubmissionService examSubmissionService;
+    @MockBean private ExamSessionService examSessionService;
 
     @Test
     @WithMockUser(roles = "ADMIN")
@@ -130,9 +132,23 @@ class ExamControllerTest {
         UUID examId = UUID.randomUUID();
         when(examService.getExam(examId)).thenReturn(readyExamWithOneQuestion(examId));
         when(examSubmissionService.hasSubmitted(examId, "user")).thenReturn(true);
+        when(examSessionService.hasActiveSession(examId, "user")).thenReturn(false);
 
         mockMvc.perform(get("/api/v1/exams/{id}", examId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.questions[0].correctOptionIndex").value(1));
+    }
+
+    @Test
+    @WithMockUser(roles = "STUDENT")
+    void getExamHidesAnswerKeyWhileRetakingEvenAfterAPriorSubmission() throws Exception {
+        UUID examId = UUID.randomUUID();
+        when(examService.getExam(examId)).thenReturn(readyExamWithOneQuestion(examId));
+        when(examSubmissionService.hasSubmitted(examId, "user")).thenReturn(true);
+        when(examSessionService.hasActiveSession(examId, "user")).thenReturn(true);
+
+        mockMvc.perform(get("/api/v1/exams/{id}", examId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.questions[0].correctOptionIndex").value(org.hamcrest.Matchers.nullValue()));
     }
 }
