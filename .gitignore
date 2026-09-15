@@ -44,7 +44,11 @@ desktop.ini
 .env
 .env.*
 !.env.example
+!.env.prod.example
 *.local
+
+### Docker (overrides locais) ###
+docker-compose.override.yml
 
 ### Logs ###
 *.log
@@ -53,3 +57,12 @@ logs/
 ### Testes / Cobertura ###
 *.hprof
 .jacoco/
+
+### Terraform ###
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+!*.tfvars.example

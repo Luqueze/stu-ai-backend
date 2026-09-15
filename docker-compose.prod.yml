@@ -1,0 +1,125 @@
+services:
+  redis:
+    image: redis:7
+    container_name: ai-exam-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - ai-exam-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: ai-exam-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - ai-exam-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    container_name: ai-exam-auth-service
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: 8087
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-3600000}
+      API_KEY_ENCRYPTION_SECRET: ${API_KEY_ENCRYPTION_SECRET}
+    networks:
+      - ai-exam-network
+
+  exam-service:
+    build:
+      context: .
+      dockerfile: services/exam-service/Dockerfile
+    container_name: ai-exam-exam-service
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: 8088
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ai-exam-network
+
+  ai-generator-service:
+    build:
+      context: .
+      dockerfile: services/ai-generator-service/Dockerfile
+    container_name: ai-exam-ai-generator-service
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: 8089
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      AI_PROVIDER: ${AI_PROVIDER:-openai}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ai-exam-network
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    container_name: ai-exam-api-gateway
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: 8086
+      AUTH_SERVICE_URL: http://auth-service:8087
+      EXAM_SERVICE_URL: http://exam-service:8088
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "8086:8086"
+    depends_on:
+      - auth-service
+      - exam-service
+    networks:
+      - ai-exam-network
+
+volumes:
+  redis_data:
+  rabbitmq_data:
+
+networks:
+  ai-exam-network:
+    driver: bridge

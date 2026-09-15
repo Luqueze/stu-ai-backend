@@ -1,0 +1,5 @@
+my_ip_cidr  = "203.0.113.7/32"
+db_username = "postgres"
+# db_password: don't put it here. Export it instead:
+#   export TF_VAR_db_password="your-strong-password"   (bash)
+#   $env:TF_VAR_db_password = "your-strong-password"    (PowerShell)
