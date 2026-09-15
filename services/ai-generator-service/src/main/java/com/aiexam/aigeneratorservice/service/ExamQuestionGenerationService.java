@@ -35,6 +35,8 @@ public class ExamQuestionGenerationService {
             Gere exatamente {questionCount} questões de múltipla escolha sobre o tema "{theme}", \
             no nível de dificuldade {difficulty}.
             Cada questão deve ter exatamente 4 alternativas, com apenas uma correta.
+            O campo correctOptionIndex é um índice de base zero na lista de alternativas: \
+            0 para a 1ª alternativa, 1 para a 2ª, 2 para a 3ª e 3 para a 4ª. Nunca use o valor 4.
             Responda estritamente no formato JSON definido pelo schema fornecido.
             """;
 
