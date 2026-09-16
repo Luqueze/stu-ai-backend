@@ -5,6 +5,10 @@ resource "random_id" "frontend_bucket_suffix" {
 resource "aws_s3_bucket" "frontend" {
   bucket = "ai-exam-frontend-${random_id.frontend_bucket_suffix.hex}"
 
+  # The build output is uploaded outside Terraform (aws s3 sync) and is fully
+  # disposable/rebuildable, so let `destroy` remove the bucket even non-empty.
+  force_destroy = true
+
   tags = {
     Project = "ai-exam"
   }
