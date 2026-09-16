@@ -13,6 +13,13 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: us-east-1
+        awslogs-group: /ai-exam/prod
+        awslogs-create-group: "true"
+        awslogs-stream-prefix: redis
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -30,6 +37,13 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: us-east-1
+        awslogs-group: /ai-exam/prod
+        awslogs-create-group: "true"
+        awslogs-stream-prefix: rabbitmq
 
   auth-service:
     image: lucas6243/ai-exam-auth-service:latest
@@ -58,6 +72,13 @@ services:
       PASSWORD_RESET_TOKEN_EXPIRATION_MS: ${PASSWORD_RESET_TOKEN_EXPIRATION_MS:-1800000}
     networks:
       - ai-exam-network
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: us-east-1
+        awslogs-group: /ai-exam/prod
+        awslogs-create-group: "true"
+        awslogs-stream-prefix: auth-service
 
   exam-service:
     image: lucas6243/ai-exam-exam-service:latest
@@ -86,6 +107,13 @@ services:
         condition: service_healthy
     networks:
       - ai-exam-network
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: us-east-1
+        awslogs-group: /ai-exam/prod
+        awslogs-create-group: "true"
+        awslogs-stream-prefix: exam-service
 
   ai-generator-service:
     image: lucas6243/ai-exam-ai-generator-service:latest
@@ -110,6 +138,13 @@ services:
         condition: service_healthy
     networks:
       - ai-exam-network
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: us-east-1
+        awslogs-group: /ai-exam/prod
+        awslogs-create-group: "true"
+        awslogs-stream-prefix: ai-generator-service
 
   api-gateway:
     image: lucas6243/ai-exam-api-gateway:latest
@@ -131,6 +166,13 @@ services:
       - exam-service
     networks:
       - ai-exam-network
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: us-east-1
+        awslogs-group: /ai-exam/prod
+        awslogs-create-group: "true"
+        awslogs-stream-prefix: api-gateway
 
 volumes:
   redis_data:

@@ -56,6 +56,7 @@ resource "aws_instance" "app" {
   instance_type          = var.ec2_instance_type
   key_name               = aws_key_pair.app.key_name
   vpc_security_group_ids = [aws_security_group.app.id]
+  iam_instance_profile   = aws_iam_instance_profile.app.name
 
   user_data = <<-EOF
     #!/bin/bash
