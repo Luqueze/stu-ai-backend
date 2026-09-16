@@ -57,6 +57,16 @@ services:
       timeout: 5s
       retries: 5
 
+  mailpit:
+    image: axllent/mailpit
+    container_name: ai-exam-mailpit
+    restart: unless-stopped
+    ports:
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+    networks:
+      - ai-exam-network
+
   auth-service:
     build:
       context: .
@@ -72,11 +82,18 @@ services:
       JWT_SECRET: ${JWT_SECRET:-xADi8Nsg/rZT5dkBSpt5OB+m9+frNVnwprnrsb+EYXU=}
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-3600000}
       API_KEY_ENCRYPTION_SECRET: ${API_KEY_ENCRYPTION_SECRET:-mekD0daFxQiVDPteEfgMxQKF5nQ63SdUehRumBS7S2I=}
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      MAIL_FROM: ${MAIL_FROM:-no-reply@stu.local}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:4200}
+      PASSWORD_RESET_TOKEN_EXPIRATION_MS: ${PASSWORD_RESET_TOKEN_EXPIRATION_MS:-1800000}
     ports:
       - "8087:8087"
     depends_on:
       postgres:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     networks:
       - ai-exam-network
 

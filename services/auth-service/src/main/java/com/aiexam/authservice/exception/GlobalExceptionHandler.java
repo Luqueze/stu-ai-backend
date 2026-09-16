@@ -36,6 +36,12 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
 
+    @ExceptionHandler(InvalidResetTokenException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidResetToken(
+            InvalidResetTokenException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+    }
+
     private ResponseEntity<ErrorResponse> build(
             HttpStatus status, String message, HttpServletRequest request) {
         ErrorResponse body = new ErrorResponse(status.value(), message, Instant.now(), request.getRequestURI());

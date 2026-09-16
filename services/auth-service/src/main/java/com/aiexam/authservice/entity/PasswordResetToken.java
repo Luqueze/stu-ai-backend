@@ -2,13 +2,12 @@ package com.aiexam.authservice.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
@@ -19,51 +18,49 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "tb_users")
+@Table(name = "tb_password_reset_tokens")
 @Getter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-public class User {
+public class PasswordResetToken {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false)
-    private String name;
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-    @Column(nullable = false, unique = true)
-    private String email;
+    @Column(name = "token_hash", nullable = false, unique = true)
+    private String tokenHash;
 
-    @Column(name = "password_hash", nullable = false)
-    private String passwordHash;
+    @Column(name = "expires_at", nullable = false)
+    private Instant expiresAt;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Role role;
+    @Column(name = "used_at")
+    private Instant usedAt;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    @Column(name = "updated_at", nullable = false)
-    private Instant updatedAt;
-
     @PrePersist
     void onCreate() {
-        Instant now = Instant.now();
         if (createdAt == null) {
-            createdAt = now;
+            createdAt = Instant.now();
         }
-        updatedAt = now;
     }
 
-    @PreUpdate
-    void onUpdate() {
-        updatedAt = Instant.now();
+    public boolean isExpired() {
+        return Instant.now().isAfter(expiresAt);
     }
 
-    public void changePassword(String newPasswordHash) {
-        this.passwordHash = newPasswordHash;
+    public boolean isUsed() {
+        return usedAt != null;
+    }
+
+    public void markUsed() {
+        this.usedAt = Instant.now();
     }
 }
