@@ -19,7 +19,7 @@ services:
         awslogs-region: us-east-1
         awslogs-group: /ai-exam/prod
         awslogs-create-group: "true"
-        awslogs-stream-prefix: redis
+        tag: "redis"
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -43,7 +43,7 @@ services:
         awslogs-region: us-east-1
         awslogs-group: /ai-exam/prod
         awslogs-create-group: "true"
-        awslogs-stream-prefix: rabbitmq
+        tag: "rabbitmq"
 
   auth-service:
     image: lucas6243/ai-exam-auth-service:latest
@@ -78,7 +78,7 @@ services:
         awslogs-region: us-east-1
         awslogs-group: /ai-exam/prod
         awslogs-create-group: "true"
-        awslogs-stream-prefix: auth-service
+        tag: "auth-service"
 
   exam-service:
     image: lucas6243/ai-exam-exam-service:latest
@@ -113,7 +113,7 @@ services:
         awslogs-region: us-east-1
         awslogs-group: /ai-exam/prod
         awslogs-create-group: "true"
-        awslogs-stream-prefix: exam-service
+        tag: "exam-service"
 
   ai-generator-service:
     image: lucas6243/ai-exam-ai-generator-service:latest
@@ -144,7 +144,7 @@ services:
         awslogs-region: us-east-1
         awslogs-group: /ai-exam/prod
         awslogs-create-group: "true"
-        awslogs-stream-prefix: ai-generator-service
+        tag: "ai-generator-service"
 
   api-gateway:
     image: lucas6243/ai-exam-api-gateway:latest
@@ -172,7 +172,7 @@ services:
         awslogs-region: us-east-1
         awslogs-group: /ai-exam/prod
         awslogs-create-group: "true"
-        awslogs-stream-prefix: api-gateway
+        tag: "api-gateway"
 
 volumes:
   redis_data:
