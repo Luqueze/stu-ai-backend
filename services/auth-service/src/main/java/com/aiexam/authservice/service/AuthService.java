@@ -10,10 +10,12 @@ import com.aiexam.authservice.exception.EmailAlreadyExistsException;
 import com.aiexam.authservice.repository.UserRepository;
 import com.aiexam.authservice.security.JwtService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -45,12 +47,18 @@ public class AuthService {
         User user =
                 userRepository
                         .findByEmail(request.email())
-                        .orElseThrow(() -> new BadCredentialsException(INVALID_CREDENTIALS_MESSAGE));
+                        .orElseThrow(
+                                () -> {
+                                    log.warn("Login failed for {}: no account with this email", request.email());
+                                    return new BadCredentialsException(INVALID_CREDENTIALS_MESSAGE);
+                                });
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            log.warn("Login failed for {}: wrong password", request.email());
             throw new BadCredentialsException(INVALID_CREDENTIALS_MESSAGE);
         }
 
+        log.info("User {} authenticated successfully", user.getEmail());
         return buildAuthResponse(user);
     }
 

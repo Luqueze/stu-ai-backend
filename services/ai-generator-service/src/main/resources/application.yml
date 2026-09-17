@@ -50,3 +50,7 @@ spring:
         initial-interval: 2s
         multiplier: 2
         max-interval: 15s
+
+logging:
+  pattern:
+    level: "%5p [traceId=%X{traceId:-}]"

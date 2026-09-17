@@ -11,14 +11,18 @@ import com.aiexam.examservice.entity.Exam;
 import com.aiexam.examservice.entity.ExamQuestion;
 import com.aiexam.examservice.entity.ExamStatus;
 import com.aiexam.examservice.exception.ExamNotFoundException;
+import com.aiexam.examservice.logging.TraceIdFilter;
 import com.aiexam.examservice.repository.ExamRepository;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ExamService {
@@ -37,12 +41,15 @@ public class ExamService {
                         .createdByEmail(createdByEmail)
                         .build();
         Exam saved = examRepository.save(exam);
+        log.info("Exam {} created with status PENDING, theme='{}'", saved.getId(), saved.getTheme());
 
+        String traceId = MDC.get(TraceIdFilter.TRACE_ID_MDC_KEY);
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.EXCHANGE,
                 RabbitMQConfig.ROUTING_KEY_REQUESTED,
                 new ExamGenerationRequestedEvent(
-                        saved.getId(), saved.getTheme(), saved.getQuestionCount(), saved.getDifficulty()));
+                        saved.getId(), saved.getTheme(), saved.getQuestionCount(), saved.getDifficulty(), traceId));
+        log.info("Published exam generation request for exam {}", saved.getId());
 
         return toResponse(saved);
     }
@@ -74,11 +81,13 @@ public class ExamService {
                                                 .build())
                         .toList();
         exam.markReady(entities);
+        log.info("Exam {} marked as READY with {} questions", examId, entities.size());
     }
 
     @Transactional
     public void failExam(UUID examId, FailureReason reason, String message) {
         findExamOrThrow(examId).markFailed(reason, message);
+        log.warn("Exam {} marked as FAILED, reason={}, message={}", examId, reason, message);
     }
 
     private Exam findExamOrThrow(UUID id) {

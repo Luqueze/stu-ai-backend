@@ -47,7 +47,9 @@ class ExamQuestionGenerationServiceTest {
         service =
                 new ExamQuestionGenerationService(
                         chatClient, structuredOutputOptionsFactory, rabbitTemplate);
-        event = new ExamGenerationRequestedEvent(UUID.randomUUID(), "Basic Arithmetic", 1, DifficultyLevel.EASY);
+        event =
+                new ExamGenerationRequestedEvent(
+                        UUID.randomUUID(), "Basic Arithmetic", 1, DifficultyLevel.EASY, "trace-123");
 
         when(chatClient.prompt()).thenReturn(requestSpec);
         when(requestSpec.user(any(Consumer.class))).thenReturn(requestSpec);
@@ -75,6 +77,7 @@ class ExamQuestionGenerationServiceTest {
         assertThat(completed.questions()).hasSize(1);
         assertThat(completed.questions().get(0).statement()).isEqualTo("Quanto é 2+2?");
         assertThat(completed.questions().get(0).correctOptionIndex()).isEqualTo(1);
+        assertThat(completed.traceId()).isEqualTo("trace-123");
     }
 
     @Test
@@ -94,6 +97,7 @@ class ExamQuestionGenerationServiceTest {
         assertThat(failed.examId()).isEqualTo(event.examId());
         assertThat(failed.reason()).isEqualTo(FailureReason.INVALID_RESPONSE);
         assertThat(failed.message()).contains("Expected 1 questions but got 2");
+        assertThat(failed.traceId()).isEqualTo("trace-123");
     }
 
     @Test

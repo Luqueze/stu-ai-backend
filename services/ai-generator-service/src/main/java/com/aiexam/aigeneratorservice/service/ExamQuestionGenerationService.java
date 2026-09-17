@@ -49,21 +49,27 @@ public class ExamQuestionGenerationService {
             new BeanOutputConverter<>(GeneratedExamPayload.class);
 
     public void generate(ExamGenerationRequestedEvent event) {
+        log.info(
+                "Calling AI model to generate exam {} (theme='{}', questionCount={}, difficulty={})",
+                event.examId(),
+                event.theme(),
+                event.questionCount(),
+                event.difficulty());
         GeneratedExamPayload payload;
         try {
             payload = callModel(event);
             validate(payload, event.questionCount());
         } catch (NonTransientAiException ex) {
             log.warn("Non-transient AI error generating exam {}", event.examId(), ex);
-            publishFailure(event.examId(), classifyNonTransient(ex), ex.getMessage());
+            publishFailure(event.examId(), classifyNonTransient(ex), ex.getMessage(), event.traceId());
             return;
         } catch (TransientAiException ex) {
             log.warn("Transient AI error generating exam {} after internal retries", event.examId(), ex);
-            publishFailure(event.examId(), FailureReason.TIMEOUT, ex.getMessage());
+            publishFailure(event.examId(), FailureReason.TIMEOUT, ex.getMessage(), event.traceId());
             return;
         } catch (InvalidGeneratedContentException ex) {
             log.warn("Invalid generated content for exam {}", event.examId(), ex);
-            publishFailure(event.examId(), FailureReason.INVALID_RESPONSE, ex.getMessage());
+            publishFailure(event.examId(), FailureReason.INVALID_RESPONSE, ex.getMessage(), event.traceId());
             return;
         }
 
@@ -75,7 +81,8 @@ public class ExamQuestionGenerationService {
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.EXCHANGE,
                 RabbitMQConfig.ROUTING_KEY_COMPLETED,
-                new ExamGenerationCompletedEvent(event.examId(), questions));
+                new ExamGenerationCompletedEvent(event.examId(), questions, event.traceId()));
+        log.info("Exam {} generated successfully with {} questions", event.examId(), questions.size());
     }
 
     private GeneratedExamPayload callModel(ExamGenerationRequestedEvent event) {
@@ -141,10 +148,10 @@ public class ExamQuestionGenerationService {
         return FailureReason.LLM_ERROR;
     }
 
-    private void publishFailure(UUID examId, FailureReason reason, String message) {
+    private void publishFailure(UUID examId, FailureReason reason, String message, String traceId) {
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.EXCHANGE,
                 RabbitMQConfig.ROUTING_KEY_FAILED,
-                new ExamGenerationFailedEvent(examId, reason, message));
+                new ExamGenerationFailedEvent(examId, reason, message, traceId));
     }
 }
