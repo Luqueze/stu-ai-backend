@@ -68,6 +68,12 @@ resource "aws_instance" "app" {
     usermod -aG docker ec2-user
   EOF
 
+  # A AMI (most_recent) e o user_data só valem na criação; mudar depois recriaria a EC2
+  # (perde .env, clone do repo e volumes). Novas AMIs da AWS não devem forçar isso.
+  lifecycle {
+    ignore_changes = [ami, user_data]
+  }
+
   tags = {
     Project = "ai-exam"
     Name    = "ai-exam-app"
