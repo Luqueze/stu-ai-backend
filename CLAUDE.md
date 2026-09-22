@@ -172,3 +172,8 @@ All REST endpoints must be documented with `springdoc-openapi` (Swagger UI/OpenA
 - `springdoc-openapi` dependency/version should be added to `gradle/libs.versions.toml` and
   declared per web-facing service (`api-gateway`, `auth-service`, `exam-service`,
   `ai-generator-service`) the same way other managed dependencies are declared.
+
+## Important Rules
+
+- Avoid adding code comments unless the logic is genuinely non-obvious; do not narrate what the code already says.
+- Always ask for confirmation before running `git commit` — never commit without the user explicitly agreeing to it first, even mid-task.
