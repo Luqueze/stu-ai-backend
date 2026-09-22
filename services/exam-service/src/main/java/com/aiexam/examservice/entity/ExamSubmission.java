@@ -44,6 +44,10 @@ public class ExamSubmission {
     @Column(name = "selected_options", columnDefinition = "int[]", nullable = false)
     private List<Integer> selectedOptions;
 
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "flagged_questions", columnDefinition = "boolean[]", nullable = false)
+    private List<Boolean> flaggedQuestions;
+
     @Column(name = "correct_count", nullable = false)
     private int correctCount;
 

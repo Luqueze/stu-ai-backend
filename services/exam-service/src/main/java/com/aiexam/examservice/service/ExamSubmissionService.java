@@ -13,6 +13,7 @@ import com.aiexam.examservice.exception.ExamSubmissionNotFoundException;
 import com.aiexam.examservice.exception.InvalidSubmissionException;
 import com.aiexam.examservice.repository.ExamRepository;
 import com.aiexam.examservice.repository.ExamSubmissionRepository;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -46,6 +47,14 @@ public class ExamSubmissionService {
                     examId, "Expected " + questions.size() + " answers but got " + answers.size());
         }
 
+        List<Boolean> flags = request.flaggedQuestions();
+        if (flags == null) {
+            flags = Collections.nCopies(questions.size(), false);
+        } else if (flags.size() != questions.size()) {
+            throw new InvalidSubmissionException(
+                    examId, "Expected " + questions.size() + " flags but got " + flags.size());
+        }
+
         int correctCount = 0;
         for (int i = 0; i < questions.size(); i++) {
             if (Objects.equals(answers.get(i), questions.get(i).getCorrectOptionIndex())) {
@@ -60,6 +69,7 @@ public class ExamSubmissionService {
                                 .exam(exam)
                                 .studentEmail(studentEmail)
                                 .selectedOptions(answers)
+                                .flaggedQuestions(flags)
                                 .correctCount(correctCount)
                                 .totalQuestions(questions.size())
                                 .scorePercentage(scorePercentage)
@@ -116,6 +126,7 @@ public class ExamSubmissionService {
                 submission.getTotalQuestions(),
                 submission.getCorrectCount(),
                 submission.getScorePercentage(),
-                submission.getSubmittedAt());
+                submission.getSubmittedAt(),
+                submission.getFlaggedQuestions());
     }
 }
