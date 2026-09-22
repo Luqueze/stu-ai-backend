@@ -79,13 +79,52 @@ class ExamSubmissionServiceTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         ExamSubmissionResponse response =
-                service().submit(examId, "ada@example.com", new SubmitExamRequest(List.of(1, 1)));
+                service()
+                        .submit(
+                                examId,
+                                "ada@example.com",
+                                new SubmitExamRequest(List.of(1, 1), List.of(true, false)));
 
         assertThat(response.examId()).isEqualTo(examId);
         assertThat(response.totalQuestions()).isEqualTo(2);
         assertThat(response.correctCount()).isEqualTo(1);
         assertThat(response.scorePercentage()).isEqualTo(50.0);
+        assertThat(response.flaggedQuestions()).containsExactly(true, false);
         verify(examSessionService).endSession(examId, "ada@example.com");
+    }
+
+    @Test
+    void submitDefaultsFlagsToAllFalseWhenOmitted() {
+        UUID examId = UUID.randomUUID();
+        Exam exam = readyExamWithQuestions(examId);
+        when(examRepository.findById(examId)).thenReturn(Optional.of(exam));
+        when(examSessionService.getSession(examId, "ada@example.com"))
+                .thenReturn(new ExamSessionResponse(examId, Instant.now(), 900L));
+        when(examSubmissionRepository.save(any(ExamSubmission.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        ExamSubmissionResponse response =
+                service().submit(examId, "ada@example.com", new SubmitExamRequest(List.of(1, 1), null));
+
+        assertThat(response.flaggedQuestions()).containsExactly(false, false);
+    }
+
+    @Test
+    void submitThrowsWhenFlagCountMismatches() {
+        UUID examId = UUID.randomUUID();
+        Exam exam = readyExamWithQuestions(examId);
+        when(examRepository.findById(examId)).thenReturn(Optional.of(exam));
+        when(examSessionService.getSession(examId, "ada@example.com"))
+                .thenReturn(new ExamSessionResponse(examId, Instant.now(), 900L));
+
+        assertThatThrownBy(
+                        () ->
+                                service()
+                                        .submit(
+                                                examId,
+                                                "ada@example.com",
+                                                new SubmitExamRequest(List.of(1, 1), List.of(true))))
+                .isInstanceOf(InvalidSubmissionException.class);
     }
 
     @Test
@@ -94,7 +133,7 @@ class ExamSubmissionServiceTest {
         when(examRepository.findById(examId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(
-                        () -> service().submit(examId, "ada@example.com", new SubmitExamRequest(List.of(0))))
+                        () -> service().submit(examId, "ada@example.com", new SubmitExamRequest(List.of(0), null)))
                 .isInstanceOf(ExamNotFoundException.class);
     }
 
@@ -113,7 +152,7 @@ class ExamSubmissionServiceTest {
         when(examRepository.findById(examId)).thenReturn(Optional.of(exam));
 
         assertThatThrownBy(
-                        () -> service().submit(examId, "ada@example.com", new SubmitExamRequest(List.of(0))))
+                        () -> service().submit(examId, "ada@example.com", new SubmitExamRequest(List.of(0), null)))
                 .isInstanceOf(InvalidExamStateException.class);
     }
 
@@ -128,7 +167,7 @@ class ExamSubmissionServiceTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         ExamSubmissionResponse response =
-                service().submit(examId, "ada@example.com", new SubmitExamRequest(List.of(1, 0)));
+                service().submit(examId, "ada@example.com", new SubmitExamRequest(List.of(1, 0), null));
 
         assertThat(response.correctCount()).isEqualTo(2);
         verify(examSubmissionRepository).save(any(ExamSubmission.class));
@@ -144,7 +183,7 @@ class ExamSubmissionServiceTest {
                 .thenThrow(new ExamSessionNotFoundException(examId));
 
         assertThatThrownBy(
-                        () -> service().submit(examId, "ada@example.com", new SubmitExamRequest(List.of(1, 1))))
+                        () -> service().submit(examId, "ada@example.com", new SubmitExamRequest(List.of(1, 1), null)))
                 .isInstanceOf(ExamSessionNotFoundException.class);
         verify(examSubmissionRepository, never()).save(any());
     }
@@ -158,7 +197,7 @@ class ExamSubmissionServiceTest {
                 .thenReturn(new ExamSessionResponse(examId, Instant.now(), 900L));
 
         assertThatThrownBy(
-                        () -> service().submit(examId, "ada@example.com", new SubmitExamRequest(List.of(1))))
+                        () -> service().submit(examId, "ada@example.com", new SubmitExamRequest(List.of(1), null)))
                 .isInstanceOf(InvalidSubmissionException.class);
     }
 
@@ -171,6 +210,7 @@ class ExamSubmissionServiceTest {
                         .exam(exam)
                         .studentEmail("ada@example.com")
                         .selectedOptions(List.of(1, 1))
+                        .flaggedQuestions(List.of(false, true))
                         .correctCount(1)
                         .totalQuestions(2)
                         .scorePercentage(50.0)
@@ -185,6 +225,7 @@ class ExamSubmissionServiceTest {
         assertThat(response.examId()).isEqualTo(examId);
         assertThat(response.correctCount()).isEqualTo(1);
         assertThat(response.scorePercentage()).isEqualTo(50.0);
+        assertThat(response.flaggedQuestions()).containsExactly(false, true);
     }
 
     @Test

@@ -42,14 +42,15 @@ class ExamSubmissionControllerTest {
     @WithMockUser(roles = "STUDENT")
     void submitReturnsCreatedWithScore() throws Exception {
         UUID examId = UUID.randomUUID();
-        ExamSubmissionResponse response = new ExamSubmissionResponse(examId, 2, 1, 50.0, Instant.now());
+        ExamSubmissionResponse response =
+                new ExamSubmissionResponse(examId, 2, 1, 50.0, Instant.now(), List.of(true, false));
         when(examSubmissionService.submit(eq(examId), any(), any())).thenReturn(response);
 
         mockMvc.perform(
                         post("/api/v1/exams/{examId}/submission", examId)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
-                                        {"selectedOptions":[1,1]}
+                                        {"selectedOptions":[1,1],"flaggedQuestions":[true,false]}
                                         """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.correctCount").value(1))
@@ -90,7 +91,8 @@ class ExamSubmissionControllerTest {
     @WithMockUser(roles = "STUDENT")
     void getSubmissionReturnsScore() throws Exception {
         UUID examId = UUID.randomUUID();
-        ExamSubmissionResponse response = new ExamSubmissionResponse(examId, 2, 2, 100.0, Instant.now());
+        ExamSubmissionResponse response =
+                new ExamSubmissionResponse(examId, 2, 2, 100.0, Instant.now(), List.of(false, false));
         when(examSubmissionService.getSubmission(eq(examId), any())).thenReturn(response);
 
         mockMvc.perform(get("/api/v1/exams/{examId}/submission", examId))
@@ -115,8 +117,8 @@ class ExamSubmissionControllerTest {
         when(examSubmissionService.getSubmissionHistory(eq(examId), any()))
                 .thenReturn(
                         List.of(
-                                new ExamSubmissionResponse(examId, 2, 2, 100.0, Instant.now()),
-                                new ExamSubmissionResponse(examId, 2, 0, 0.0, Instant.now())));
+                                new ExamSubmissionResponse(examId, 2, 2, 100.0, Instant.now(), List.of(false, false)),
+                                new ExamSubmissionResponse(examId, 2, 0, 0.0, Instant.now(), List.of(true, true))));
 
         mockMvc.perform(get("/api/v1/exams/{examId}/submission/history", examId))
                 .andExpect(status().isOk())
