@@ -25,6 +25,12 @@ compartilhar um link com amigos testarem. Não é infra de produção "de verdad
 - **CORS no `api-gateway`** — como front (S3) e back (EC2) ficam em origens
   diferentes, o `api-gateway` libera explicitamente a origem do S3 via
   `CORS_ALLOWED_ORIGINS` (`SecurityConfig.java`).
+- **Logs no CloudWatch** — containers enviam stdout pro log group `/ai-exam/prod`
+  via driver `awslogs`, com permissão dada por IAM role na EC2 (`iam.tf`). Veja a
+  seção "Logs (CloudWatch)".
+- **CI/CD do back-end** — `.github/workflows/deploy.yml`. Todo push na `main` roda
+  os testes, builda e publica as imagens no Docker Hub e atualiza a EC2 via SSM,
+  sem SSH. Veja a seção "CI/CD (GitHub Actions)".
 - Tudo criado como código em `infra/terraform/` (Terraform), pra poder recriar ou
   destruir com um comando.
 
@@ -81,12 +87,13 @@ exige atualizar o outro, a menos que a mudança envolva o contrato da API (novo
 endpoint, request/response diferente) ou CORS.
 
 **Back-end** (código em `back-end/`, roda na EC2 via Docker Hub):
-1. Commitar e dar `git push` das mudanças.
-2. No seu PC: `docker compose -f docker-compose.prod.yml build && docker compose -f docker-compose.prod.yml push`
-3. Na EC2 (SSH): `git pull && docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d`
-4. Conferir: `http://<IP_DA_EC2>:8086/actuator/health` deve responder `{"status":"UP"}`.
+1. Commitar e dar `git push` na `main` — o workflow **Deploy** faz o resto sozinho.
+2. Acompanhar na aba **Actions** do GitHub; o job só fica verde depois que
+   `/actuator/health` responde `UP`.
 
-Detalhes em "Atualizar o código (build local + push + pull na EC2)" mais abaixo.
+Detalhes em "CI/CD (GitHub Actions)" mais abaixo. O caminho manual (build local +
+push + pull na EC2) continua funcionando como plano B — veja "Atualizar o código
+(build local + push + pull na EC2)".
 
 **Front-end** (código em `front-end/`, servido pelo S3):
 1. Se o IP da EC2 mudou, atualizar `apiUrl` em `environment.ts` **antes** de buildar.
@@ -229,6 +236,124 @@ docker compose -f docker-compose.prod.yml up -d api-gateway
 Não precisa rebuildar a imagem pra isso — é só variável de ambiente. Só precisa
 rebuildar/republicar a imagem do `api-gateway` se o **código** do `SecurityConfig`
 mudar.
+
+## CI/CD (GitHub Actions)
+
+O deploy do back-end é automático: `.github/workflows/deploy.yml` roda a cada push
+na `main` (ou manualmente em **Actions** → **Deploy** → **Run workflow**).
+
+### O que o workflow faz
+
+1. **Test** — `./gradlew test`. Teste quebrado barra o deploy.
+2. **Build and push** — builda as 4 imagens em paralelo e publica no Docker Hub com
+   as tags `latest` (a que o `docker-compose.prod.yml` usa) e o SHA do commit (pra
+   rollback manual). Camadas ficam em cache no GitHub, então builds seguintes são
+   mais rápidos.
+3. **Deploy to EC2** — assume a role da AWS via OIDC e manda, pelo **SSM Run
+   Command**, o mesmo comando do deploy manual (`git pull` + `compose pull` +
+   `up -d` + `docker image prune -f`), rodando como `ec2-user`. Depois espera
+   `/actuator/health` responder `UP` por até ~5 minutos.
+
+Dois deploys nunca rodam ao mesmo tempo (`concurrency`): um push novo espera o
+anterior terminar.
+
+### Por que SSM e não SSH
+
+A porta 22 só aceita o seu IP, e os runners do GitHub têm IPs variáveis. Com o SSM,
+o agente que já vem no Amazon Linux 2023 mantém uma conexão de saída com a AWS e
+recebe os comandos por ali — nenhuma porta nova aberta, nenhuma chave SSH no GitHub.
+
+### Autenticação sem access key (OIDC)
+
+O GitHub não guarda credencial da AWS. A cada execução ele recebe um token
+temporário assumindo uma role que **só** aceita a branch `main` deste repositório.
+
+Configurado à mão pelo Console (fora do Terraform):
+- **IAM → Identity providers:** `token.actions.githubusercontent.com`, audience
+  `sts.amazonaws.com`. Um por conta — serve também pro front-end.
+- **Role `github-actions-backend-deploy`:** trust policy restrita a
+  `repo:Luqueze/stu-ai-backend:ref:refs/heads/main`; inline policy com
+  `ssm:SendCommand` só na EC2 do projeto + documento `AWS-RunShellScript`, e
+  `ssm:GetCommandInvocation`/`ssm:ListCommandInvocations` pra ler o resultado.
+- **Role da EC2 (`ai-exam-app-ec2-role`):** recebeu a managed policy
+  `AmazonSSMManagedInstanceCore`, que deixa o agente SSM se registrar. O Terraform
+  não remove essa policy no `apply` (ele só gerencia a inline de CloudWatch).
+
+Pra conferir se o agente está conectado, na EC2:
+```bash
+sudo tail -n 30 /var/log/amazon/ssm/amazon-ssm-agent.log   # procurar "Set up control channel successfully"
+```
+Ou no Console: Systems Manager → Fleet Manager → instância com **Ping status: Online**.
+
+### Secrets no GitHub (Settings → Secrets and variables → Actions)
+
+| Secret | Conteúdo |
+|---|---|
+| `DOCKERHUB_USERNAME` | `lucas6243` |
+| `DOCKERHUB_TOKEN` | Personal access token do Docker Hub (Read & Write) |
+| `AWS_ROLE_ARN` | `arn:aws:iam::061513607652:role/github-actions-backend-deploy` |
+
+O `.env` com os segredos da aplicação continua **só na EC2** — o CI nunca vê senha
+do RDS, `JWT_SECRET` etc.
+
+### Se recriar a infra
+
+Instance ID (`EC2_INSTANCE_ID`) e IP (`API_BASE_URL`) estão fixos no topo do
+`deploy.yml`, e o Instance ID também na inline policy da role. Depois de um
+`terraform destroy` + `apply`, atualize os três e reanexe
+`AmazonSSMManagedInstanceCore` na role da EC2 (ela é recriada pelo Terraform sem
+essa policy). O clone na EC2 precisa estar em `~/stu-ai-backend` e sem alterações
+locais, senão o `git pull --ff-only` falha.
+
+### Quando o deploy falha
+
+- **Test / Build and push:** erro de código ou de Dockerfile — nada chegou na EC2.
+- **Deploy to EC2:** o log do step "Wait for deploy command" mostra o stdout/stderr
+  que a EC2 devolveu (ex: `git pull` com conflito, falta de disco).
+- **Health check:** as imagens subiram mas o gateway não ficou `UP` — veja os logs
+  no CloudWatch (seção abaixo) ou `docker compose -f docker-compose.prod.yml ps` na EC2.
+
+## Logs (CloudWatch)
+
+Os containers mandam o stdout pro CloudWatch Logs pelo driver `awslogs` do Docker
+(configurado em cada serviço do `docker-compose.prod.yml`), então os logs continuam
+existindo mesmo se o container for recriado ou a EC2 morrer.
+
+- **Log group:** `/ai-exam/prod`, região `us-east-1`. Cada container é um *stream*,
+  nomeado pelo `tag` do compose: `api-gateway`, `auth-service`, `exam-service`,
+  `ai-generator-service`, `rabbitmq`, `redis`.
+- **Permissão:** a EC2 escreve via o instance profile `ai-exam-app-instance-profile`
+  (`infra/terraform/iam.tf`) — sem access key dentro da máquina. Se aparecer
+  `AccessDenied` no `docker compose logs`, o profile não está anexado.
+- **O group não é do Terraform:** é criado pelo próprio Docker
+  (`awslogs-create-group: "true"`) no primeiro `up -d`. Por isso ele **não some com
+  `terraform destroy`** e não tem retenção definida (guarda pra sempre e cobra
+  armazenamento). Apague pelo Console AWS quando encerrar de vez, ou defina a
+  retenção lá (ex: 7 ou 14 dias).
+- **Ver no Console:** CloudWatch → Log groups → `/ai-exam/prod` → escolher o stream.
+  Pra buscar em todos de uma vez: "Logs Insights" com o group selecionado.
+- **`docker compose logs` na EC2 continua funcionando** com o driver `awslogs`
+  (o Docker mantém uma cópia local), útil quando o Console está lento.
+
+### Rastrear uma requisição entre serviços (traceId)
+
+Cada log dos serviços Java sai com `[traceId=...]` (padrão em `application.yml`).
+O `auth-service` e o `exam-service` têm um `TraceIdFilter` que lê o header
+`X-Trace-Id` (ou gera um UUID se vier vazio/inválido), coloca no log e devolve o
+mesmo header na resposta. Quando o `exam-service` publica a geração de prova pro
+RabbitMQ, o `traceId` viaja dentro dos eventos (`common-events`), então o
+`ai-generator-service` loga com o **mesmo id** — dá pra seguir uma prova do POST até
+o `READY` (ou falha) com uma busca só.
+
+No Logs Insights, com o group `/ai-exam/prod`:
+```
+fields @timestamp, @logStream, @message
+| filter @message like "COLE-O-TRACE-ID-AQUI"
+| sort @timestamp asc
+```
+O id vem no header `X-Trace-Id` da resposta (aba Network do navegador ou Swagger).
+O `api-gateway` não gera trace id por conta própria: se o cliente não mandar
+`X-Trace-Id`, quem gera é o serviço que recebe a requisição.
 
 ## Parar vs. destruir — não confundir
 
