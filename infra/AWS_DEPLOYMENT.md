@@ -271,8 +271,11 @@ temporário assumindo uma role que **só** aceita a branch `main` deste reposit�
 Configurado à mão pelo Console (fora do Terraform):
 - **IAM → Identity providers:** `token.actions.githubusercontent.com`, audience
   `sts.amazonaws.com`. Um por conta — serve também pro front-end.
-- **Role `github-actions-backend-deploy`:** trust policy restrita a
-  `repo:Luqueze/stu-ai-backend:ref:refs/heads/main`; inline policy com
+- **Role `github-actions-backend-deploy`:** trust policy com `StringEquals` no `sub`
+  `repo:Luqueze@93887953/stu-ai-backend@1346788723:ref:refs/heads/main`. O GitHub
+  emite o `sub` com os IDs numéricos do dono e do repo (não só os nomes) — um `sub`
+  no formato `repo:Luqueze/stu-ai-backend:...` é recusado com
+  `Not authorized to perform sts:AssumeRoleWithWebIdentity`. Inline policy com
   `ssm:SendCommand` só na EC2 do projeto + documento `AWS-RunShellScript`, e
   `ssm:GetCommandInvocation`/`ssm:ListCommandInvocations` pra ler o resultado.
 - **Role da EC2 (`ai-exam-app-ec2-role`):** recebeu a managed policy
