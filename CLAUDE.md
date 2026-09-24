@@ -173,6 +173,12 @@ All REST endpoints must be documented with `springdoc-openapi` (Swagger UI/OpenA
   declared per web-facing service (`api-gateway`, `auth-service`, `exam-service`,
   `ai-generator-service`) the same way other managed dependencies are declared.
 
+## Commit Messages
+
+- Every commit message must start with a conventional prefix describing the change, followed by a colon and a short description: `feat:`, `fix:`, `ref:` (refactor), `chore:`, `docs:`, `test:`, `style:`, `perf:`.
+- Keep the subject line short and to the point. A short body below it is fine for extra context, but keep it brief (a few short lines) — avoid long, multi-paragraph commit bodies.
+- Do not add attribution/co-authored-by lines (including Claude session links) to commits or PR descriptions.
+
 ## Important Rules
 
 - Avoid adding code comments unless the logic is genuinely non-obvious; do not narrate what the code already says.
