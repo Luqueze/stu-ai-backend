@@ -66,3 +66,6 @@ crash.log
 crash.*.log
 *.tfvars
 !*.tfvars.example
+
+# Notas pessoais de estudo
+CICDdocs.md
