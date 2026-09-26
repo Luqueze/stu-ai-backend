@@ -20,8 +20,11 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USER:guest}
     password: ${RABBITMQ_PASSWORD:guest}
+    template:
+      observation-enabled: true
     listener:
       simple:
+        observation-enabled: true
         retry:
           enabled: true
           max-attempts: 3
@@ -51,6 +54,11 @@ spring:
         multiplier: 2
         max-interval: 15s
 
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+
 logging:
   pattern:
-    level: "%5p [traceId=%X{traceId:-}]"
+    correlation: "[traceId=%X{traceId:-} spanId=%X{spanId:-}] "

@@ -18,6 +18,7 @@ sonar {
     properties {
         property("sonar.projectKey", "Luqueze_stu-ai")
         property("sonar.organization", "luqueze")
+        property("sonar.cpd.exclusions", "**/exception/GlobalExceptionHandler.java")
     }
 }
 

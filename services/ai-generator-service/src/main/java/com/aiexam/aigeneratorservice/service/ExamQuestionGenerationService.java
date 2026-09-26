@@ -61,15 +61,15 @@ public class ExamQuestionGenerationService {
             validate(payload, event.questionCount());
         } catch (NonTransientAiException ex) {
             log.warn("Non-transient AI error generating exam {}", event.examId(), ex);
-            publishFailure(event.examId(), classifyNonTransient(ex), ex.getMessage(), event.traceId());
+            publishFailure(event.examId(), classifyNonTransient(ex), ex.getMessage());
             return;
         } catch (TransientAiException ex) {
             log.warn("Transient AI error generating exam {} after internal retries", event.examId(), ex);
-            publishFailure(event.examId(), FailureReason.TIMEOUT, ex.getMessage(), event.traceId());
+            publishFailure(event.examId(), FailureReason.TIMEOUT, ex.getMessage());
             return;
         } catch (InvalidGeneratedContentException ex) {
             log.warn("Invalid generated content for exam {}", event.examId(), ex);
-            publishFailure(event.examId(), FailureReason.INVALID_RESPONSE, ex.getMessage(), event.traceId());
+            publishFailure(event.examId(), FailureReason.INVALID_RESPONSE, ex.getMessage());
             return;
         }
 
@@ -81,7 +81,7 @@ public class ExamQuestionGenerationService {
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.EXCHANGE,
                 RabbitMQConfig.ROUTING_KEY_COMPLETED,
-                new ExamGenerationCompletedEvent(event.examId(), questions, event.traceId()));
+                new ExamGenerationCompletedEvent(event.examId(), questions));
         log.info("Exam {} generated successfully with {} questions", event.examId(), questions.size());
     }
 
@@ -148,10 +148,10 @@ public class ExamQuestionGenerationService {
         return FailureReason.LLM_ERROR;
     }
 
-    private void publishFailure(UUID examId, FailureReason reason, String message, String traceId) {
+    private void publishFailure(UUID examId, FailureReason reason, String message) {
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.EXCHANGE,
                 RabbitMQConfig.ROUTING_KEY_FAILED,
-                new ExamGenerationFailedEvent(examId, reason, message, traceId));
+                new ExamGenerationFailedEvent(examId, reason, message));
     }
 }

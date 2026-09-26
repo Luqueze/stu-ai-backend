@@ -23,8 +23,11 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USER:guest}
     password: ${RABBITMQ_PASSWORD:guest}
+    template:
+      observation-enabled: true
     listener:
       simple:
+        observation-enabled: true
         retry:
           enabled: true
           max-attempts: 3
@@ -48,6 +51,11 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+
 logging:
   pattern:
-    level: "%5p [traceId=%X{traceId:-}]"
+    correlation: "[traceId=%X{traceId:-} spanId=%X{spanId:-}] "

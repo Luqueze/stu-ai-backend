@@ -340,13 +340,21 @@ existindo mesmo se o container for recriado ou a EC2 morrer.
 
 ### Rastrear uma requisição entre serviços (traceId)
 
-Cada log dos serviços Java sai com `[traceId=...]` (padrão em `application.yml`).
-O `auth-service` e o `exam-service` têm um `TraceIdFilter` que lê o header
-`X-Trace-Id` (ou gera um UUID se vier vazio/inválido), coloca no log e devolve o
-mesmo header na resposta. Quando o `exam-service` publica a geração de prova pro
-RabbitMQ, o `traceId` viaja dentro dos eventos (`common-events`), então o
-`ai-generator-service` loga com o **mesmo id** — dá pra seguir uma prova do POST até
-o `READY` (ou falha) com uma busca só.
+O tracing é feito pelo **Micrometer Tracing** (bridge OpenTelemetry), sem código
+próprio. Cada log sai com `[traceId=... spanId=...]` (`logging.pattern.correlation` no
+`application.yml`) e o id atravessa o sistema inteiro sozinho:
+
+- O `api-gateway` inicia o trace e repassa pros serviços no header W3C `traceparent`
+  (no WebFlux, o MDC depende de `spring.reactor.context-propagation: auto`).
+- `auth-service` e `exam-service` continuam o mesmo trace; o
+  `TraceIdResponseHeaderFilter` devolve o id no header `X-Trace-Id` da resposta.
+- No RabbitMQ, `spring.rabbitmq.template/listener.simple.observation-enabled` põe o
+  `traceparent` nos headers da mensagem, então o `ai-generator-service` e a volta pro
+  `exam-service` logam com o **mesmo id** — dá pra seguir uma prova do POST até o
+  `READY` (ou falha) com uma busca só. Os eventos do `common-events` não carregam mais
+  campo de trace.
+- `management.tracing.sampling.probability: 1.0`: todo request é rastreado. Não há
+  exporter (Zipkin/X-Ray) configurado — os spans só servem pra correlacionar logs.
 
 No Logs Insights, com o group `/ai-exam/prod`:
 ```
@@ -354,9 +362,9 @@ fields @timestamp, @logStream, @message
 | filter @message like "COLE-O-TRACE-ID-AQUI"
 | sort @timestamp asc
 ```
-O id vem no header `X-Trace-Id` da resposta (aba Network do navegador ou Swagger).
-O `api-gateway` não gera trace id por conta própria: se o cliente não mandar
-`X-Trace-Id`, quem gera é o serviço que recebe a requisição.
+O id (32 caracteres hex) vem no header `X-Trace-Id` da resposta (aba Network do
+navegador ou Swagger). Um cliente que quiser continuar um trace próprio deve mandar
+`traceparent`, não `X-Trace-Id` — o header de entrada antigo não é mais lido.
 
 ## Parar vs. destruir — não confundir
 
