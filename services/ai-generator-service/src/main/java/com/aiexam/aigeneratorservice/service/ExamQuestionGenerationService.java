@@ -5,6 +5,7 @@ import com.aiexam.aigeneratorservice.config.StructuredOutputOptionsFactory;
 import com.aiexam.aigeneratorservice.dto.GeneratedExamPayload;
 import com.aiexam.aigeneratorservice.dto.GeneratedQuestionPayload;
 import com.aiexam.aigeneratorservice.exception.InvalidGeneratedContentException;
+import com.aiexam.commonevents.DifficultyLevel;
 import com.aiexam.commonevents.ExamGenerationCompletedEvent;
 import com.aiexam.commonevents.ExamGenerationFailedEvent;
 import com.aiexam.commonevents.ExamGenerationRequestedEvent;
@@ -30,13 +31,40 @@ import org.springframework.web.client.ResourceAccessException;
 @RequiredArgsConstructor
 public class ExamQuestionGenerationService {
 
+    private static final String SYSTEM_PROMPT =
+            """
+            Você é um professor especialista e elaborador experiente de provas para avaliações de alto nível \
+            (vestibulares, concursos e exames de certificação). Suas questões avaliam compreensão profunda, \
+            raciocínio e aplicação de conceitos, e não apenas memorização de definições. \
+            Escreva sempre em português do Brasil, com linguagem clara, precisa e tecnicamente correta.
+            """;
+
     private static final String PROMPT_TEMPLATE =
             """
-            Gere exatamente {questionCount} questões de múltipla escolha sobre o tema "{theme}", \
-            no nível de dificuldade {difficulty}.
-            Cada questão deve ter exatamente 4 alternativas, com apenas uma correta.
+            Elabore exatamente {questionCount} questões de múltipla escolha sobre o tema "{theme}".
+
+            Nível de dificuldade: {difficulty}.
+            {difficultyGuidelines}
+
+            Requisitos para o enunciado (campo statement):
+            - Cada enunciado deve ser aprofundado, com 3 a 6 frases: apresente um contexto, situação-problema, \
+            caso prático, trecho de código, dado ou cenário realista antes de fazer a pergunta.
+            - Termine com um comando claro e inequívoco (por exemplo: "Com base nessa situação, qual...").
+            - Evite perguntas triviais do tipo "O que é X?" ou que possam ser respondidas só pela memorização de um termo.
+            - Varie os subtópicos do tema e os tipos de habilidade cobrados (interpretação, análise, aplicação, \
+            comparação, identificação de erros), sem repetir o mesmo conceito entre questões.
+
+            Requisitos para as alternativas (campo options):
+            - Exatamente 4 alternativas por questão, com apenas uma correta.
+            - Alternativas completas e com extensão semelhante, sem letras ou numeração no início do texto.
+            - As alternativas incorretas devem ser plausíveis, baseadas em erros conceituais comuns ou \
+            interpretações equivocadas, e não obviamente absurdas.
+            - Não use "todas as anteriores", "nenhuma das anteriores" ou alternativas que se sobreponham.
+            - Distribua a posição da alternativa correta de forma variada entre as questões.
+
             O campo correctOptionIndex é um índice de base zero na lista de alternativas: \
             0 para a 1ª alternativa, 1 para a 2ª, 2 para a 3ª e 3 para a 4ª. Nunca use o valor 4.
+            Antes de responder, confira que a alternativa indicada é de fato a única correta.
             Responda estritamente no formato JSON definido pelo schema fornecido.
             """;
 
@@ -94,12 +122,14 @@ public class ExamQuestionGenerationService {
             content =
                     chatClient
                             .prompt()
+                            .system(SYSTEM_PROMPT)
                             .user(
                                     u ->
                                             u.text(PROMPT_TEMPLATE)
                                                     .param("questionCount", event.questionCount())
                                                     .param("theme", event.theme())
-                                                    .param("difficulty", event.difficulty()))
+                                                    .param("difficulty", event.difficulty())
+                                                    .param("difficultyGuidelines", difficultyGuidelines(event.difficulty())))
                             .options(options)
                             .call()
                             .content();
@@ -119,6 +149,18 @@ public class ExamQuestionGenerationService {
         } catch (RuntimeException ex) {
             throw new InvalidGeneratedContentException("Failed to parse AI response as JSON: " + ex.getMessage());
         }
+    }
+
+    private String difficultyGuidelines(DifficultyLevel difficulty) {
+        return switch (difficulty) {
+            case EASY -> "Cobre conceitos fundamentais do tema, mas sempre aplicados a um contexto concreto, "
+                    + "exigindo compreensão e não apenas lembrar uma definição.";
+            case MEDIUM -> "Exija aplicação e análise: o aluno deve relacionar dois ou mais conceitos, interpretar "
+                    + "o cenário apresentado ou prever o resultado de uma situação.";
+            case HARD -> "Exija análise crítica e síntese: cenários complexos com múltiplas etapas de raciocínio, "
+                    + "casos de borda, trade-offs ou exceções, com distratores sutis que só um aluno com domínio "
+                    + "profundo do tema consiga descartar.";
+        };
     }
 
     private void validate(GeneratedExamPayload payload, int expectedQuestionCount) {

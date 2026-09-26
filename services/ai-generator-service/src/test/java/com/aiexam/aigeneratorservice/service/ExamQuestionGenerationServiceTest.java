@@ -52,6 +52,7 @@ class ExamQuestionGenerationServiceTest {
                         UUID.randomUUID(), "Basic Arithmetic", 1, DifficultyLevel.EASY);
 
         when(chatClient.prompt()).thenReturn(requestSpec);
+        when(requestSpec.system(anyString())).thenReturn(requestSpec);
         when(requestSpec.user(any(Consumer.class))).thenReturn(requestSpec);
         when(requestSpec.options(any(ChatOptions.class))).thenReturn(requestSpec);
         when(requestSpec.call()).thenReturn(callResponseSpec);
