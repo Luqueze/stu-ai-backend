@@ -345,9 +345,10 @@ próprio. Cada log sai com `[traceId=... spanId=...]` (`logging.pattern.correlat
 `application.yml`) e o id atravessa o sistema inteiro sozinho:
 
 - O `api-gateway` inicia o trace e repassa pros serviços no header W3C `traceparent`
-  (no WebFlux, o MDC depende de `spring.reactor.context-propagation: auto`).
-- `auth-service` e `exam-service` continuam o mesmo trace; o
-  `TraceIdResponseHeaderFilter` devolve o id no header `X-Trace-Id` da resposta.
+  (no WebFlux, o MDC depende de `spring.reactor.context-propagation: auto`). O
+  `TraceIdResponseHeaderFilter` do gateway devolve o id no header `X-Trace-Id` de toda
+  resposta, inclusive 401/403 do próprio gateway.
+- `auth-service` e `exam-service` continuam o mesmo trace.
 - No RabbitMQ, `spring.rabbitmq.template/listener.simple.observation-enabled` põe o
   `traceparent` nos headers da mensagem, então o `ai-generator-service` e a volta pro
   `exam-service` logam com o **mesmo id** — dá pra seguir uma prova do POST até o
