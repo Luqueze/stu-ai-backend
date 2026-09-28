@@ -47,24 +47,40 @@ public class ExamQuestionGenerationService {
             {difficultyGuidelines}
 
             Requisitos para o enunciado (campo statement):
-            - Cada enunciado deve ser aprofundado, com 3 a 6 frases: apresente um contexto, situação-problema, \
-            caso prático, trecho de código, dado ou cenário realista antes de fazer a pergunta.
+            - Varie o tamanho dos enunciados ao longo da prova, misturando três formatos:
+              * curtos e diretos (3 a 4 frases), com uma pergunta objetiva que ainda exija raciocínio;
+              * médios (5 a 6 frases), com um contexto ou situação-problema breve;
+              * longos (7 a 9 frases), com caso prático, trecho de código, dados ou cenário realista detalhado.
+            - Nenhum formato deve ultrapassar metade das questões; alterne-os sem seguir um padrão previsível.
             - Termine com um comando claro e inequívoco (por exemplo: "Com base nessa situação, qual...").
             - Evite perguntas triviais do tipo "O que é X?" ou que possam ser respondidas só pela memorização de um termo.
             - Varie os subtópicos do tema e os tipos de habilidade cobrados (interpretação, análise, aplicação, \
             comparação, identificação de erros), sem repetir o mesmo conceito entre questões.
 
             Requisitos para as alternativas (campo options):
-            - Exatamente 4 alternativas por questão, com apenas uma correta.
-            - Alternativas completas e com extensão semelhante, sem letras ou numeração no início do texto.
-            - As alternativas incorretas devem ser plausíveis, baseadas em erros conceituais comuns ou \
-            interpretações equivocadas, e não obviamente absurdas.
-            - Não use "todas as anteriores", "nenhuma das anteriores" ou alternativas que se sobreponham.
+            - Exatamente 4 alternativas por questão, sem letras ou numeração no início do texto.
+            - Exatamente UMA alternativa correta. As outras três devem estar inequivocamente erradas para \
+            um especialista no tema: não podem ser parcialmente corretas, corretas sob outra interpretação \
+            do enunciado nem depender de suposições não informadas.
+            - As alternativas devem ser genuinamente diferentes entre si, cada uma expressando uma ideia, \
+            conceito, valor ou raciocínio distinto. É proibido criar alternativas quase idênticas que diferem \
+            apenas por uma palavra, um número, uma negação ou o trecho final da frase.
+            - Cada alternativa incorreta deve representar um erro diferente (conceito confundido, aplicação \
+            indevida, interpretação equivocada do cenário, caso de borda ignorado), plausível e não obviamente absurda.
+            - Dentro de uma mesma questão, mantenha extensão e nível de detalhe comparáveis entre as alternativas, \
+            para que a correta não se destaque por ser a mais longa ou a mais específica.
+            - Não use "todas as anteriores", "nenhuma das anteriores" ou alternativas que se sobreponham ou se \
+            impliquem mutuamente.
             - Distribua a posição da alternativa correta de forma variada entre as questões.
 
             O campo correctOptionIndex é um índice de base zero na lista de alternativas: \
             0 para a 1ª alternativa, 1 para a 2ª, 2 para a 3ª e 3 para a 4ª. Nunca use o valor 4.
-            Antes de responder, confira que a alternativa indicada é de fato a única correta.
+
+            Antes de responder, revise cada questão:
+            1. Confirme que a alternativa indicada em correctOptionIndex é correta e que nenhuma outra também é.
+            2. Compare as alternativas entre si; se duas forem parecidas ou diferirem só em um detalhe, reescreva uma delas.
+            3. Verifique que os enunciados têm tamanhos variados ao longo da prova.
+
             Responda estritamente no formato JSON definido pelo schema fornecido.
             """;
 
