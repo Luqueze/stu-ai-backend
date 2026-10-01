@@ -2,12 +2,11 @@ package com.aiexam.apigateway.security;
 
 import java.util.List;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
-import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.security.web.server.context.NoOpServerSecurityContextRepository;
@@ -17,10 +16,7 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebFluxSecurity
-@RequiredArgsConstructor
 public class SecurityConfig {
-
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Value("${app.cors.allowed-origins}")
     private List<String> allowedOrigins;
@@ -33,7 +29,6 @@ public class SecurityConfig {
                 .authorizeExchange(
                         auth ->
                                 auth.pathMatchers(
-                                                "/api/v1/auth/**",
                                                 "/actuator/**",
                                                 "/v3/api-docs/**",
                                                 "/swagger-ui/**",
@@ -44,7 +39,7 @@ public class SecurityConfig {
                                         .permitAll()
                                         .anyExchange()
                                         .authenticated())
-                .addFilterAt(jwtAuthenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION);
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
 
         return http.build();
     }

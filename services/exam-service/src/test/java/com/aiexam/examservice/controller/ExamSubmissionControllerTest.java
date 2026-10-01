@@ -12,8 +12,6 @@ import com.aiexam.examservice.dto.ExamSubmissionResponse;
 import com.aiexam.examservice.dto.ExamSubmissionSummaryResponse;
 import com.aiexam.examservice.exception.ExamSubmissionNotFoundException;
 import com.aiexam.examservice.exception.InvalidSubmissionException;
-import com.aiexam.examservice.security.JwtAuthenticationFilter;
-import com.aiexam.examservice.security.JwtService;
 import com.aiexam.examservice.security.SecurityConfig;
 import com.aiexam.examservice.service.ExamSubmissionService;
 import java.time.Instant;
@@ -31,7 +29,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(ExamSubmissionController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtService.class})
+@Import(SecurityConfig.class)
 class ExamSubmissionControllerTest {
 
     @Autowired private MockMvc mockMvc;

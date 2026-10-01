@@ -1,50 +1,56 @@
 package com.aiexam.apigateway.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
 
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
 import java.time.Instant;
-import java.util.Date;
-import javax.crypto.SecretKey;
+import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.oauth2.jwt.BadJwtException;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import reactor.core.publisher.Mono;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @AutoConfigureWebTestClient
 class GatewaySecurityFilterTest {
 
-    private static final String SECRET = "xADi8Nsg/rZT5dkBSpt5OB+m9+frNVnwprnrsb+EYXU=";
+    private static final String VALID_TOKEN = "valid-token";
 
     @Autowired private WebTestClient webTestClient;
 
-    private String tokenWithRole(String role) {
-        SecretKey key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(SECRET));
-        Instant now = Instant.now();
-        return Jwts.builder()
-                .subject("ada@example.com")
-                .claim("role", role)
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plusMillis(3_600_000L)))
-                .signWith(key)
-                .compact();
+    @MockBean private ReactiveJwtDecoder jwtDecoder;
+
+    @BeforeEach
+    void setUp() {
+        when(jwtDecoder.decode(anyString())).thenReturn(Mono.error(new BadJwtException("Invalid token")));
+        when(jwtDecoder.decode(eq(VALID_TOKEN)))
+                .thenReturn(
+                        Mono.just(
+                                Jwt.withTokenValue(VALID_TOKEN)
+                                        .header("alg", "RS256")
+                                        .subject("2f1c4f0e-3b7a-4d4e-9a51-7c0f7c2b1d11")
+                                        .claim("email", "ada@example.com")
+                                        .claim("roles", List.of("STUDENT"))
+                                        .issuedAt(Instant.now())
+                                        .expiresAt(Instant.now().plusSeconds(300))
+                                        .build()));
     }
 
     @Test
     void rejectsProtectedRouteWithoutToken() {
-        webTestClient
-                .get()
-                .uri("/api/v1/exams")
-                .exchange()
-                .expectStatus()
-                .isUnauthorized();
+        webTestClient.get().uri("/api/v1/exams").exchange().expectStatus().isUnauthorized();
     }
 
     @Test
@@ -63,17 +69,7 @@ class GatewaySecurityFilterTest {
         webTestClient
                 .get()
                 .uri("/api/v1/exams")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithRole("STUDENT"))
-                .exchange()
-                .expectStatus()
-                .value(status -> assertThat(status).isNotEqualTo(HttpStatus.UNAUTHORIZED.value()));
-    }
-
-    @Test
-    void permitsAuthRouteWithoutToken() {
-        webTestClient
-                .post()
-                .uri("/api/v1/auth/login")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + VALID_TOKEN)
                 .exchange()
                 .expectStatus()
                 .value(status -> assertThat(status).isNotEqualTo(HttpStatus.UNAUTHORIZED.value()));

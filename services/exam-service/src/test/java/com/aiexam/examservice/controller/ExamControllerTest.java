@@ -12,8 +12,6 @@ import com.aiexam.examservice.dto.ExamQuestionResponse;
 import com.aiexam.examservice.dto.ExamResponse;
 import com.aiexam.examservice.entity.ExamStatus;
 import com.aiexam.examservice.exception.ExamNotFoundException;
-import com.aiexam.examservice.security.JwtAuthenticationFilter;
-import com.aiexam.examservice.security.JwtService;
 import com.aiexam.examservice.security.SecurityConfig;
 import com.aiexam.examservice.service.ExamService;
 import com.aiexam.examservice.service.ExamSessionService;
@@ -33,7 +31,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(ExamController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtService.class})
+@Import(SecurityConfig.class)
 class ExamControllerTest {
 
     @Autowired private MockMvc mockMvc;

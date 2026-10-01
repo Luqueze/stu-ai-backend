@@ -67,6 +67,52 @@ services:
     networks:
       - ai-exam-network
 
+  keycloak-db-init:
+    image: postgres:16
+    container_name: ai-exam-keycloak-db-init
+    environment:
+      PGPASSWORD: ${DB_PASSWORD}
+    command: >
+      sh -c "psql -h postgres -U ${DB_USER} -d postgres -tc \"SELECT 1 FROM pg_database WHERE datname = 'keycloak_db'\" | grep -q 1
+      || psql -h postgres -U ${DB_USER} -d postgres -c 'CREATE DATABASE keycloak_db'"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ai-exam-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: ai-exam-keycloak
+    restart: unless-stopped
+    command: start-dev --import-realm
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak_db
+      KC_DB_USERNAME: ${DB_USER}
+      KC_DB_PASSWORD: ${DB_PASSWORD}
+      KC_HOSTNAME: http://localhost:${KEYCLOAK_PORT:-8180}
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HEALTH_ENABLED: "true"
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+    ports:
+      - "${KEYCLOAK_PORT:-8180}:8080"
+    volumes:
+      - ./infra/local/keycloak:/opt/keycloak/data/import:ro
+    depends_on:
+      keycloak-db-init:
+        condition: service_completed_successfully
+      mailpit:
+        condition: service_started
+    networks:
+      - ai-exam-network
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 && while read -r line <&3; do [[ $$line == *UP* ]] && exit 0; done; exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
   auth-service:
     build:
       context: .
@@ -79,21 +125,16 @@ services:
       DB_PORT: 5432
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
-      JWT_SECRET: ${JWT_SECRET:-xADi8Nsg/rZT5dkBSpt5OB+m9+frNVnwprnrsb+EYXU=}
-      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-3600000}
       API_KEY_ENCRYPTION_SECRET: ${API_KEY_ENCRYPTION_SECRET:-mekD0daFxQiVDPteEfgMxQKF5nQ63SdUehRumBS7S2I=}
-      MAIL_HOST: mailpit
-      MAIL_PORT: 1025
-      MAIL_FROM: ${MAIL_FROM:-no-reply@stu.local}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:4200}
-      PASSWORD_RESET_TOKEN_EXPIRATION_MS: ${PASSWORD_RESET_TOKEN_EXPIRATION_MS:-1800000}
+      KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/stu
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/stu/protocol/openid-connect/certs
     ports:
       - "8087:8087"
     depends_on:
       postgres:
         condition: service_healthy
-      mailpit:
-        condition: service_started
+      keycloak:
+        condition: service_healthy
     networks:
       - ai-exam-network
 
@@ -115,7 +156,8 @@ services:
       RABBITMQ_PORT: 5672
       RABBITMQ_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
-      JWT_SECRET: ${JWT_SECRET:-xADi8Nsg/rZT5dkBSpt5OB+m9+frNVnwprnrsb+EYXU=}
+      KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/stu
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/stu/protocol/openid-connect/certs
     ports:
       - "8088:8088"
     depends_on:
@@ -124,6 +166,8 @@ services:
       redis:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      keycloak:
         condition: service_healthy
     networks:
       - ai-exam-network
@@ -165,10 +209,12 @@ services:
       SERVER_PORT: 8086
       AUTH_SERVICE_URL: http://auth-service:8087
       EXAM_SERVICE_URL: http://exam-service:8088
-      JWT_SECRET: ${JWT_SECRET:-xADi8Nsg/rZT5dkBSpt5OB+m9+frNVnwprnrsb+EYXU=}
+      KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/stu
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/stu/protocol/openid-connect/certs
     ports:
       - "8086:8086"
     depends_on:
+      - keycloak
       - auth-service
       - exam-service
     networks:

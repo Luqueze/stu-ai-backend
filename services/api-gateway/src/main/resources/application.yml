@@ -6,13 +6,23 @@ spring:
     name: api-gateway
   reactor:
     context-propagation: auto
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/stu}
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8180/realms/stu/protocol/openid-connect/certs}
+          audiences: stu-api
+          principal-claim-name: email
+          authorities-claim-name: roles
+          authority-prefix: ROLE_
   cloud:
     gateway:
       routes:
         - id: auth-service
           uri: ${AUTH_SERVICE_URL:http://localhost:8087}
           predicates:
-            - Path=/api/v1/auth/**,/api/v1/users/**
+            - Path=/api/v1/users/**
         - id: exam-service
           uri: ${EXAM_SERVICE_URL:http://localhost:8088}
           predicates:
@@ -31,9 +41,6 @@ spring:
             - RewritePath=/exam-service/v3/api-docs, /v3/api-docs
 
 app:
-  security:
-    jwt:
-      secret: ${JWT_SECRET:xADi8Nsg/rZT5dkBSpt5OB+m9+frNVnwprnrsb+EYXU=}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
 
@@ -42,6 +49,9 @@ springdoc:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
+    oauth:
+      client-id: stu-swagger
+      use-pkce-with-authorization-code-grant: true
   swagger-ui.urls[0].name: auth-service
   swagger-ui.urls[0].url: /auth-service/v3/api-docs
   swagger-ui.urls[1].name: exam-service

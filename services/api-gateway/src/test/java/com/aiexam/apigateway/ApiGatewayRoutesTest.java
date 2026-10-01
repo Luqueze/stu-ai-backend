@@ -38,7 +38,7 @@ class ApiGatewayRoutesTest {
                         .findFirst()
                         .orElseThrow(() -> new AssertionError("auth-service route not found"));
         assertThat(authRoute.get("uri").toString()).contains("8087");
-        assertThat(authRoute.get("predicate").toString()).contains("/api/v1/auth/**").contains("/api/v1/users/**");
+        assertThat(authRoute.get("predicate").toString()).contains("/api/v1/users/**").doesNotContain("/api/v1/auth/**");
 
         Map<String, Object> examRoute =
                 routes.stream()

@@ -32,12 +32,34 @@ Physical directories are organized as `services/*` and `shared/*`, but `settings
 ### Services
 
 - **api-gateway** — Spring Cloud Gateway + Actuator. Entry point / routing layer.
-- **auth-service** — Web, Security, Data JPA, Validation. Owns authentication/authorization.
+- **auth-service** — Web, Security (OAuth2 resource server), Data JPA, Validation. Owns the local user
+  profile (`tb_users`, linked to the Keycloak `sub` via `keycloak_id`, provisioned on first request) and
+  the user's AI API keys. It does **not** issue tokens or handle login/registration — Keycloak does.
 - **exam-service** — Web, Data JPA, Data Redis. Depends on `common-events`.
 - **ai-generator-service** — Web + Spring AI's OpenAI starter (`spring-ai-openai-spring-boot-starter`). Depends on `common-events`. Handles AI-driven question/exam generation.
 - **common-events** (`shared/common-events`) — plain `java-library`, deliberately has **no** Spring Boot runtime dependency. Holds shared DTOs/records (event contracts) consumed by `exam-service` and `ai-generator-service`. Keep it dependency-light since it's a compile-time dependency of multiple services.
 
 Package convention: `com.aiexam.<servicenamewithoutdashes>` (e.g. `com.aiexam.examservice`, `com.aiexam.aigeneratorservice`).
+
+### Authentication — Keycloak
+
+Keycloak (realm `stu`, versioned in `infra/local/keycloak/stu-realm.json`, imported on first start by
+`docker-compose.yml`) is the only token issuer. Login, registration, email verification and password
+reset live there — do not reintroduce them in a service.
+
+- `api-gateway`, `auth-service` and `exam-service` are `spring-boot-starter-oauth2-resource-server`s, each
+  validating the token independently (defense in depth). Validation and claim mapping are configured
+  **declaratively** in each `application.yml` under `spring.security.oauth2.resourceserver.jwt`
+  (`issuer-uri`, `jwk-set-uri`, `audiences: stu-api`, `authorities-claim-name: roles`,
+  `authority-prefix: ROLE_`) — don't write custom JWT filters or converters.
+- `issuer-uri` is the browser-facing URL (`http://localhost:8180/realms/stu`), while `jwk-set-uri` may
+  point to the in-network host (`http://keycloak:8080/...`) — they intentionally differ inside Docker.
+- Roles are realm roles `ADMIN`/`STUDENT` in the `roles` claim → `ROLE_ADMIN`/`ROLE_STUDENT`.
+- `exam-service` uses `principal-claim-name: email`, so `Authentication#getName()` is the user's email
+  (exam ownership is stored by email).
+- Swagger UI authenticates through the public `stu-swagger` client (Authorization Code + PKCE).
+- Tests mock `JwtDecoder`/`ReactiveJwtDecoder` and send a bearer token, so the real claim-mapping
+  config is exercised without a running Keycloak.
 
 `infra/local` and `infra/terraform` exist as placeholders for local-dev infra (e.g. docker-compose) and IaC, respectively — currently empty.
 

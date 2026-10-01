@@ -2,8 +2,6 @@ package com.aiexam.authservice.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -30,18 +28,14 @@ public class User {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(name = "keycloak_id", unique = true)
+    private UUID keycloakId;
+
     @Column(nullable = false)
     private String name;
 
     @Column(nullable = false, unique = true)
     private String email;
-
-    @Column(name = "password_hash", nullable = false)
-    private String passwordHash;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Role role;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -63,7 +57,12 @@ public class User {
         updatedAt = Instant.now();
     }
 
-    public void changePassword(String newPasswordHash) {
-        this.passwordHash = newPasswordHash;
+    public void linkKeycloakAccount(UUID keycloakId) {
+        this.keycloakId = keycloakId;
+    }
+
+    public void syncProfile(String name, String email) {
+        this.name = name;
+        this.email = email;
     }
 }
